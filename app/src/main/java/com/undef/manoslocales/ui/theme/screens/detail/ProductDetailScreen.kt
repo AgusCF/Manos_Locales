@@ -9,15 +9,22 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.undef.manoslocales.data.model.Product
+import com.undef.manoslocales.viewmodel.FavoritesViewModel
 
 @Composable
 fun ProductDetailScreen(
     navController: NavController,
-    product: Product
+    product: Product,
+    favoritesViewModel: FavoritesViewModel
 ) {
+    val isFavorite = remember {
+        derivedStateOf { favoritesViewModel.isFavorite(product) }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = rememberAsyncImagePainter(model = product.imageUrl),
@@ -38,10 +45,12 @@ fun ProductDetailScreen(
             Text("Precio: \$${product.price}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(onClick = {
-                // Lógica de favoritos más adelante
-            }) {
-                Text("Agregar a Favoritos ❤️")
+            Button(
+                onClick = { favoritesViewModel.toggleFavorite(product) }
+            ) {
+                Text(
+                    if (isFavorite.value) "Quitar de Favoritos 💔" else "Agregar a Favoritos ❤️"
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

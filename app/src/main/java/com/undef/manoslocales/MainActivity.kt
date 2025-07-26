@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 
@@ -27,6 +28,7 @@ import com.undef.manoslocales.ui.theme.screens.login.LoginScreen
 import com.undef.manoslocales.ui.theme.screens.register.RegisterScreen
 import com.undef.manoslocales.ui.theme.screens.settings.SettingsScreen
 import com.undef.manoslocales.ui.theme.screens.splash.SplashScreen
+import com.undef.manoslocales.viewmodel.FavoritesViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,20 +36,33 @@ class MainActivity : ComponentActivity() {
         setContent {
             ManosLocalesTheme {
                 val navController = rememberNavController()
-                AppNavigation(navController)
+                // Creamos una sola instancia para compartir entre pantallas
+                val favoritesViewModel: FavoritesViewModel = viewModel()
+                AppNavigation(navController, favoritesViewModel)
             }
         }
     }
 }
 
+
 @Composable
-fun AppNavigation(navController: NavHostController) {
+fun AppNavigation(
+    navController: NavHostController,
+    favoritesViewModel: FavoritesViewModel
+) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
-        composable(Screen.Splash.route) { SplashScreen(navController) }
-        composable(Screen.Login.route) { LoginScreen(navController) }
-        composable(Screen.Register.route) { RegisterScreen(navController) }
-        composable(Screen.Feed.route) { FeedScreen(navController) }
-        //composable(Screen.Settings.route) { SettingsScreen(navController) }
+        composable(Screen.Splash.route) {
+            SplashScreen(navController)
+        }
+        composable(Screen.Login.route) {
+            LoginScreen(navController)
+        }
+        composable(Screen.Register.route) {
+            RegisterScreen(navController)
+        }
+        composable(Screen.Feed.route) {
+            FeedScreen(navController, favoritesViewModel)
+        }
 
         composable(
             route = Screen.Detail.route,
@@ -55,8 +70,13 @@ fun AppNavigation(navController: NavHostController) {
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getInt("productId")
             val product = sampleProducts.find { it.id == productId }
+
             if (product != null) {
-                ProductDetailScreen(navController, product)
+                ProductDetailScreen(
+                    navController = navController,
+                    product = product,
+                    favoritesViewModel = favoritesViewModel
+                )
             } else {
                 Text("Producto no encontrado")
             }

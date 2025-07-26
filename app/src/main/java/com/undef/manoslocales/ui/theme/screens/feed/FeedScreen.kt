@@ -21,7 +21,7 @@ import com.undef.manoslocales.viewmodel.FavoritesViewModel
 @Composable
 fun FeedScreen(
     navController: NavController,
-    favoritesViewModel: FavoritesViewModel = viewModel()
+    favoritesViewModel: FavoritesViewModel
 ) {
     val favorites = favoritesViewModel.favorites
 
@@ -32,13 +32,13 @@ fun FeedScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
 
-            // Favoritos en LazyRow
             if (favorites.isNotEmpty()) {
                 Text(
                     text = "Tus Favoritos",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp)
                 )
+
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 8.dp)
@@ -58,7 +58,6 @@ fun FeedScreen(
                 }
             }
 
-            // Lista principal
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(sampleProducts) { product ->
                     val isFav = favoritesViewModel.isFavorite(product)
@@ -77,3 +76,4 @@ fun FeedScreen(
         }
     }
 }
+
