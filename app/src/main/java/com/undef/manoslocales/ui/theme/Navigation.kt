@@ -1,0 +1,12 @@
+package com.undef.manoslocales.ui.theme
+
+sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
+    object Login : Screen("login")
+    object Register : Screen("register")
+    object Feed : Screen("feed")
+    object Detail : Screen("detail/{productId}") {
+        fun createRoute(productId: Int) = "detail/$productId"
+    }
+    object Settings : Screen("settings")
+}
