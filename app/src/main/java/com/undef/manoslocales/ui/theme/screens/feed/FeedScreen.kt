@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -27,7 +29,16 @@ fun FeedScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Productos Locales") })
+            TopAppBar(
+                title = { Text("Productos Locales") },
+                actions = {
+                    IconButton(onClick = {
+                        navController.navigate(Screen.FavoritesOnly.route)
+                    }) {
+                        Icon(Icons.Default.Favorite, contentDescription = "Ver favoritos")
+                    }
+                }
+            )
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {

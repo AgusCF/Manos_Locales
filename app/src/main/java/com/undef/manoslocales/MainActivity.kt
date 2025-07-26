@@ -23,6 +23,7 @@ import com.undef.manoslocales.data.sampleProducts
 import com.undef.manoslocales.ui.theme.ManosLocalesTheme
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.ui.theme.screens.detail.ProductDetailScreen
+import com.undef.manoslocales.ui.theme.screens.favorite.FavoritesOnlyScreen
 import com.undef.manoslocales.ui.theme.screens.feed.FeedScreen
 import com.undef.manoslocales.ui.theme.screens.login.LoginScreen
 import com.undef.manoslocales.ui.theme.screens.register.RegisterScreen
@@ -80,6 +81,9 @@ fun AppNavigation(
             } else {
                 Text("Producto no encontrado")
             }
+        }
+        composable(Screen.FavoritesOnly.route) {
+            FavoritesOnlyScreen(navController, favoritesViewModel)
         }
     }
 }

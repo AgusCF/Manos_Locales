@@ -9,4 +9,5 @@ sealed class Screen(val route: String) {
         fun createRoute(productId: Int) = "detail/$productId"
     }
     object Settings : Screen("settings")
+    object FavoritesOnly : Screen("favorites_only")
 }
