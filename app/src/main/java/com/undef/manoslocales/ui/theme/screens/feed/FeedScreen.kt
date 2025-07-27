@@ -19,6 +19,13 @@ import com.undef.manoslocales.data.sampleProducts
 import com.undef.manoslocales.ui.theme.components.ProductCard
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Composable
 fun FeedScreen(
@@ -26,6 +33,18 @@ fun FeedScreen(
     favoritesViewModel: FavoritesViewModel
 ) {
     val favorites = favoritesViewModel.favorites
+
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Todas") }
+    var expanded by remember { mutableStateOf(false) }
+
+    val categories = listOf("Todas") + sampleProducts.map { it.category }.distinct()
+
+    val filteredProducts = sampleProducts.filter { product ->
+        val matchesSearch = product.name.contains(searchQuery, ignoreCase = true)
+        val matchesCategory = selectedCategory == "Todas" || product.category == selectedCategory
+        matchesSearch && matchesCategory
+    }
 
     Scaffold(
         topBar = {
@@ -41,13 +60,59 @@ fun FeedScreen(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
+        Column(modifier = Modifier
+            .padding(padding)
+            .fillMaxSize()) {
 
+            // 🔍 Búsqueda
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Buscar por nombre") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                singleLine = true,
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = "Buscar")
+                }
+            )
+
+            // 🗂️ Filtro por categoría
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)) {
+                OutlinedButton(
+                    onClick = { expanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Categoría: $selectedCategory")
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    categories.forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(category) },
+                            onClick = {
+                                selectedCategory = category
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 💖 Favoritos (LazyRow)
             if (favorites.isNotEmpty()) {
                 Text(
                     text = "Tus Favoritos",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 16.dp, top = 8.dp)
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp)
                 )
 
                 LazyRow(
@@ -69,8 +134,9 @@ fun FeedScreen(
                 }
             }
 
+            // 🧾 Lista de productos filtrados
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(sampleProducts) { product ->
+                items(filteredProducts) { product ->
                     val isFav = favoritesViewModel.isFavorite(product)
                     ProductCard(
                         product = product,
@@ -87,4 +153,5 @@ fun FeedScreen(
         }
     }
 }
+
 
