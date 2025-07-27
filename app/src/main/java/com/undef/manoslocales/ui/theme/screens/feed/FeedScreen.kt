@@ -26,26 +26,38 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import com.undef.manoslocales.viewmodel.ProductViewModel
 
 @Composable
 fun FeedScreen(
     navController: NavController,
-    favoritesViewModel: FavoritesViewModel
+    favoritesViewModel: FavoritesViewModel,
+    productViewModel: ProductViewModel = viewModel()
 ) {
     val favorites = favoritesViewModel.favorites
+    val products = productViewModel.products
+    val isLoading = productViewModel.isLoading
+    val error = productViewModel.errorMessage
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Todas") }
     var expanded by remember { mutableStateOf(false) }
 
-    val categories = listOf("Todas") + sampleProducts.map { it.category }.distinct()
+    // Categorías dinámicas según los productos cargados
+    val categories = remember(products) {
+        listOf("Todas") + products.map { it.category }.distinct()
+    }
 
-    val filteredProducts = sampleProducts.filter { product ->
+    // Filtro por búsqueda y categoría
+    val filteredProducts = products.filter { product ->
         val matchesSearch = product.name
-            .split(" ", "-", ",", ".", "(", ")") // Divide por más de un separador
+            .split(" ", "-", ",", ".", "(", ")")
             .any { word -> word.startsWith(searchQuery, ignoreCase = true) }
 
         val matchesCategory = selectedCategory == "Todas" || product.category == selectedCategory
+
         matchesSearch && matchesCategory
     }
 
@@ -67,7 +79,7 @@ fun FeedScreen(
             .padding(padding)
             .fillMaxSize()) {
 
-            //Búsqueda
+            // 🔍 Búsqueda
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -81,7 +93,7 @@ fun FeedScreen(
                 }
             )
 
-            //Filtro por categoría
+            // 🎯 Filtro por categoría
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)) {
@@ -110,7 +122,7 @@ fun FeedScreen(
                 }
             }
 
-            //Favoritos (LazyRow)
+            // ❤️ Favoritos
             if (favorites.isNotEmpty()) {
                 Text(
                     text = "Tus Favoritos",
@@ -137,25 +149,44 @@ fun FeedScreen(
                 }
             }
 
-            //Lista de productos filtrados
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(filteredProducts) { product ->
-                    val isFav = favoritesViewModel.isFavorite(product)
-                    ProductCard(
-                        product = product,
-                        isFavorite = isFav,
-                        onFavoriteClick = {
-                            favoritesViewModel.toggleFavorite(product)
-                        },
-                        onClick = {
-                            navController.navigate(Screen.Detail.createRoute(product.id))
-                        }
+            // 📦 Lista de productos
+            when {
+                isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                error != null -> {
+                    Text(
+                        text = "Ocurrió un error: $error",
+                        color = Color.Red,
+                        modifier = Modifier.padding(16.dp)
                     )
+                }
+
+                else -> {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(filteredProducts) { product ->
+                            val isFav = favoritesViewModel.isFavorite(product)
+                            ProductCard(
+                                product = product,
+                                isFavorite = isFav,
+                                onFavoriteClick = {
+                                    favoritesViewModel.toggleFavorite(product)
+                                },
+                                onClick = {
+                                    navController.navigate(Screen.Detail.createRoute(product.id))
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
+
 
 
 
