@@ -19,11 +19,11 @@ import com.undef.manoslocales.viewmodel.FavoritesViewModel
 fun ProductDetailScreen(
     navController: NavController,
     product: Product,
-    favoritesViewModel: FavoritesViewModel
+    favoritesViewModel: FavoritesViewModel // Agregado
 ) {
-    val isFavorite = remember {
-        derivedStateOf { favoritesViewModel.isFavorite(product) }
-    }
+    val isFavorite by remember { derivedStateOf {
+        favoritesViewModel.isFavoriteById(product.id)
+    } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -46,11 +46,11 @@ fun ProductDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { favoritesViewModel.toggleFavorite(product) }
+                onClick = {
+                    favoritesViewModel.toggleFavorite(product)
+                }
             ) {
-                Text(
-                    if (isFavorite.value) "Quitar de Favoritos 💔" else "Agregar a Favoritos ❤️"
-                )
+                Text(if (isFavorite) "Quitar de Favoritos 💔" else "Agregar a Favoritos ❤️")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
