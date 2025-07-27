@@ -4,6 +4,6 @@ import com.undef.manoslocales.data.model.Product
 import retrofit2.http.GET
 
 interface ApiService {
-    @GET("/api/products")
+    @GET("/tecno/products")
     suspend fun getProducts(): List<Product>
 }
