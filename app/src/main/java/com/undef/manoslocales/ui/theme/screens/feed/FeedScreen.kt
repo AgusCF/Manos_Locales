@@ -41,7 +41,10 @@ fun FeedScreen(
     val categories = listOf("Todas") + sampleProducts.map { it.category }.distinct()
 
     val filteredProducts = sampleProducts.filter { product ->
-        val matchesSearch = product.name.contains(searchQuery, ignoreCase = true)
+        val matchesSearch = product.name
+            .split(" ", "-", ",", ".", "(", ")") // Divide por más de un separador
+            .any { word -> word.startsWith(searchQuery, ignoreCase = true) }
+
         val matchesCategory = selectedCategory == "Todas" || product.category == selectedCategory
         matchesSearch && matchesCategory
     }
@@ -64,7 +67,7 @@ fun FeedScreen(
             .padding(padding)
             .fillMaxSize()) {
 
-            // 🔍 Búsqueda
+            //Búsqueda
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -78,7 +81,7 @@ fun FeedScreen(
                 }
             )
 
-            // 🗂️ Filtro por categoría
+            //Filtro por categoría
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)) {
@@ -107,7 +110,7 @@ fun FeedScreen(
                 }
             }
 
-            // 💖 Favoritos (LazyRow)
+            //Favoritos (LazyRow)
             if (favorites.isNotEmpty()) {
                 Text(
                     text = "Tus Favoritos",
@@ -134,7 +137,7 @@ fun FeedScreen(
                 }
             }
 
-            // 🧾 Lista de productos filtrados
+            //Lista de productos filtrados
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filteredProducts) { product ->
                     val isFav = favoritesViewModel.isFavorite(product)
@@ -153,5 +156,6 @@ fun FeedScreen(
         }
     }
 }
+
 
 
