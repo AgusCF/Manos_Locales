@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.undef.manoslocales.data.remote.RetrofitInstance
 import com.undef.manoslocales.ui.theme.ManosLocalesTheme
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.ui.theme.screens.detail.ProductDetailScreen
@@ -22,6 +23,9 @@ import com.undef.manoslocales.ui.theme.screens.register.RegisterScreen
 import com.undef.manoslocales.ui.theme.screens.splash.SplashScreen
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
+import com.undef.manoslocales.viewmodel.UserViewModel
+import com.undef.manoslocales.viewmodel.UserViewModelFactory
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,35 +33,50 @@ class MainActivity : ComponentActivity() {
         setContent {
             ManosLocalesTheme {
                 val navController = rememberNavController()
-                // Creamos una sola instancia para compartir entre pantallas
+
                 val favoritesViewModel: FavoritesViewModel = viewModel()
                 val productViewModel: ProductViewModel = viewModel()
-                AppNavigation(navController, favoritesViewModel, productViewModel)
+
+                // Instanciamos ApiService manualmente (o usa tu singleton)
+                val apiService = RetrofitInstance.api
+
+                // ViewModel con parámetros personalizados
+                val userViewModel: UserViewModel = viewModel(
+                    factory = UserViewModelFactory(apiService)
+                )
+
+                AppNavigation(
+                    navController = navController,
+                    favoritesViewModel = favoritesViewModel,
+                    productViewModel = productViewModel,
+                    userViewModel = userViewModel
+                )
             }
         }
     }
 }
 
+
 @Composable
 fun AppNavigation(
     navController: NavHostController,
     favoritesViewModel: FavoritesViewModel,
-    productViewModel: ProductViewModel
+    productViewModel: ProductViewModel,
+    userViewModel: UserViewModel
 ) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
             SplashScreen(navController)
         }
         composable(Screen.Login.route) {
-            LoginScreen(navController)
+            LoginScreen(navController, userViewModel) // 👈 ahora recibe userViewModel
         }
         composable(Screen.Register.route) {
-            RegisterScreen(navController)
+            RegisterScreen(navController) // luego lo pasamos si querés registro real
         }
         composable(Screen.Feed.route) {
             FeedScreen(navController, favoritesViewModel, productViewModel)
         }
-
         composable(
             route = Screen.Detail.route,
             arguments = listOf(navArgument("productId") { type = NavType.IntType })

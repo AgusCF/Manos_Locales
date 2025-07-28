@@ -9,12 +9,24 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.viewmodel.UserViewModel
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(navController: NavController, userViewModel: UserViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
+
+    val currentUser = userViewModel.currentUser
+    val loginError = userViewModel.loginError
+
+    // Si ya está logueado, navegar
+    LaunchedEffect(currentUser) {
+        if (currentUser != null) {
+            navController.navigate(Screen.Feed.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -49,23 +61,16 @@ fun LoginScreen(navController: NavController) {
 
         Button(
             onClick = {
-                // Validación simulada
-                if (email == "test@local.com" && password == "1234") {
-                    navController.navigate(Screen.Feed.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                } else {
-                    showError = true
-                }
+                userViewModel.login(email, password)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Ingresar")
         }
 
-        if (showError) {
+        loginError?.let {
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Email o contraseña incorrecta", color = MaterialTheme.colorScheme.error)
+            Text(it, color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
