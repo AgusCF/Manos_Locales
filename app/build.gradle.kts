@@ -81,5 +81,4 @@ dependencies {
 
 // Accompanist (animaciones, permisos, etc. opcional)
     implementation("com.google.accompanist:accompanist-permissions:0.31.5-beta")
-
 }
