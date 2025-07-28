@@ -9,12 +9,29 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.viewmodel.UserViewModel
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(
+    navController: NavController,
+    userViewModel: UserViewModel
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
+
+    val loginResult by userViewModel.loginSuccess.collectAsState()
+
+    LaunchedEffect(loginResult) {
+        if (loginResult == true) {
+            navController.navigate(Screen.Feed.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
+            }
+        } else if (loginResult == false) {
+            showError = true
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -49,14 +66,8 @@ fun LoginScreen(navController: NavController) {
 
         Button(
             onClick = {
-                // Validación simulada
-                if (email == "test@local.com" && password == "1234") {
-                    navController.navigate(Screen.Feed.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                } else {
-                    showError = true
-                }
+                showError = false // Resetear error antes del intento
+                userViewModel.loginUser(email, password)
             },
             modifier = Modifier.fillMaxWidth()
         ) {

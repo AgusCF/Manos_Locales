@@ -10,14 +10,23 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.viewmodel.UserViewModel
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @Composable
-fun RegisterScreen(navController: NavController) {
+fun RegisterScreen(
+    navController: NavController,
+    userViewModel: UserViewModel
+) {
     var email by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+    var successMessage by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -78,16 +87,27 @@ fun RegisterScreen(navController: NavController) {
 
         Button(
             onClick = {
-                // Validación básica
-                errorMessage = when {
-                    username.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank() ->
-                        "Todos los campos son obligatorios"
-                    password != confirmPassword ->
-                        "Las contraseñas no coinciden"
+                errorMessage = ""
+                successMessage = ""
+
+                when {
+                    username.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank() -> {
+                        errorMessage = "Todos los campos son obligatorios"
+                    }
+                    password != confirmPassword -> {
+                        errorMessage = "Las contraseñas no coinciden"
+                    }
                     else -> {
-                        // Simulamos éxito y volvemos al login
-                        navController.popBackStack()
-                        ""
+                        coroutineScope.launch {
+                            val (wasRegistered, message) = userViewModel.registerUser(username, email, password)
+                            if (wasRegistered) {
+                                successMessage = message ?: "Usuario registrado correctamente"
+                                delay(2000)
+                                navController.popBackStack()
+                            } else {
+                                errorMessage = message ?: "No se pudo registrar el usuario. Intente nuevamente."
+                            }
+                        }
                     }
                 }
             },
@@ -96,12 +116,14 @@ fun RegisterScreen(navController: NavController) {
             Text("Registrarme")
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        if (errorMessage.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+        }
 
-        TextButton(onClick = {
-            navController.popBackStack() // Volver al login
-        }) {
-            Text("¿Ya tenés cuenta? Iniciar sesión")
+        if (successMessage.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = successMessage, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

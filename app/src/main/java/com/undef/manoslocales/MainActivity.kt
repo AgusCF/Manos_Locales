@@ -22,6 +22,7 @@ import com.undef.manoslocales.ui.theme.screens.register.RegisterScreen
 import com.undef.manoslocales.ui.theme.screens.splash.SplashScreen
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
+import com.undef.manoslocales.viewmodel.UserViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +33,8 @@ class MainActivity : ComponentActivity() {
                 // Creamos una sola instancia para compartir entre pantallas
                 val favoritesViewModel: FavoritesViewModel = viewModel()
                 val productViewModel: ProductViewModel = viewModel()
-                AppNavigation(navController, favoritesViewModel, productViewModel)
+                val userViewModel: UserViewModel = viewModel()
+                AppNavigation(navController, favoritesViewModel, productViewModel, userViewModel)
             }
         }
     }
@@ -42,20 +44,35 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(
     navController: NavHostController,
     favoritesViewModel: FavoritesViewModel,
-    productViewModel: ProductViewModel
+    productViewModel: ProductViewModel,
+    userViewModel: UserViewModel
 ) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
+
         composable(Screen.Splash.route) {
             SplashScreen(navController)
         }
+
         composable(Screen.Login.route) {
-            LoginScreen(navController)
+            LoginScreen(
+                navController = navController,
+                userViewModel = userViewModel // 👈 Pasamos UserViewModel
+            )
         }
+
         composable(Screen.Register.route) {
-            RegisterScreen(navController)
+            RegisterScreen(
+                navController = navController,
+                userViewModel = userViewModel // 👈 Pasamos UserViewModel
+            )
         }
+
         composable(Screen.Feed.route) {
-            FeedScreen(navController, favoritesViewModel, productViewModel)
+            FeedScreen(
+                navController = navController,
+                favoritesViewModel = favoritesViewModel,
+                productViewModel = productViewModel
+            )
         }
 
         composable(
@@ -78,8 +95,12 @@ fun AppNavigation(
                 Text("Producto no encontrado")
             }
         }
+
         composable(Screen.FavoritesOnly.route) {
-            FavoritesOnlyScreen(navController, favoritesViewModel)
+            FavoritesOnlyScreen(
+                navController = navController,
+                favoritesViewModel = favoritesViewModel
+            )
         }
     }
 }
