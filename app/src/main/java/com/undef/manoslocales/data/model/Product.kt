@@ -1,6 +1,8 @@
 package com.undef.manoslocales.data.model
+
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+
 @Parcelize
 data class Product(
     val id: Int,
@@ -9,4 +11,4 @@ data class Product(
     val price: String,
     val imageUrl: String,
     val category: String
-): Parcelable
+) : Parcelable

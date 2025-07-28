@@ -35,13 +35,34 @@ fun ProductCard(
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Aquí podrías mostrar la imagen si está cargando bien
-            Text(text = product.name, style = MaterialTheme.typography.titleMedium)
-            Text(text = product.description, style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Precio: ${product.price}", style = MaterialTheme.typography.bodySmall)
+        Box {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Nombre y descripción
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = product.description,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Precio: \$${product.price}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
 
-            IconButton(onClick = { onFavoriteClick() }) {
+            // ❤️ Ícono de favorito en la esquina superior derecha
+            IconButton(
+                onClick = { onFavoriteClick() },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+            ) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Favorito",

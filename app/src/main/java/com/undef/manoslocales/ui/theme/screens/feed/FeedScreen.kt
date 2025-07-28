@@ -2,33 +2,27 @@
 
 package com.undef.manoslocales.ui.theme.screens.feed
 
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.undef.manoslocales.data.sampleProducts
-import com.undef.manoslocales.ui.theme.components.ProductCard
 import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.ui.theme.components.ProductCard
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import com.undef.manoslocales.viewmodel.ProductViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun FeedScreen(
@@ -36,21 +30,27 @@ fun FeedScreen(
     favoritesViewModel: FavoritesViewModel,
     productViewModel: ProductViewModel = viewModel()
 ) {
-    val favorites = favoritesViewModel.favorites
-    val products = productViewModel.products
-    val isLoading = productViewModel.isLoading
-    val error = productViewModel.errorMessage
+    // ✅ Cargar productos una sola vez al iniciar
+    LaunchedEffect(Unit) {
+        productViewModel.loadProducts()
+    }
+
+    val products by productViewModel.products.collectAsState(initial = emptyList())
+    val isLoading by productViewModel.isLoading.collectAsState(initial = false)
+    val error by productViewModel.errorMessage.collectAsState(initial = null)
+    val favorites by favoritesViewModel.favorites.collectAsState()
+
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Todas") }
     var expanded by remember { mutableStateOf(false) }
 
-    // Categorías dinámicas según los productos cargados
+    val coroutineScope = rememberCoroutineScope() // <-- esta línea es esencial
+
     val categories = remember(products) {
         listOf("Todas") + products.map { it.category }.distinct()
     }
 
-    // Filtro por búsqueda y categoría
     val filteredProducts = products.filter { product ->
         val matchesSearch = product.name
             .split(" ", "-", ",", ".", "(", ")")
@@ -64,7 +64,8 @@ fun FeedScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Productos Locales") },
+                title = { Text("Productos Manos Locales") },
+//                title = { Text("Productos Locales") },
                 actions = {
                     IconButton(onClick = {
                         navController.navigate(Screen.FavoritesOnly.route)
@@ -75,9 +76,11 @@ fun FeedScreen(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier
-            .padding(padding)
-            .fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
 
             // 🔍 Búsqueda
             OutlinedTextField(
@@ -166,17 +169,21 @@ fun FeedScreen(
                 }
 
                 else -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(filteredProducts) { product ->
-                            val isFav = favoritesViewModel.isFavorite(product)
+                    LazyColumn {
+                        items(products) { product ->
+                            val isFavorite = favorites.any { it.id == product.id }
+
                             ProductCard(
                                 product = product,
-                                isFavorite = isFav,
+                                isFavorite = isFavorite,
                                 onFavoriteClick = {
                                     favoritesViewModel.toggleFavorite(product)
                                 },
                                 onClick = {
-                                    navController.navigate(Screen.Detail.createRoute(product.id))
+                                    coroutineScope.launch {
+                                        delay(500)
+                                        navController.navigate(Screen.Detail.createRoute(product.id))
+                                    }
                                 }
                             )
                         }
@@ -186,7 +193,3 @@ fun FeedScreen(
         }
     }
 }
-
-
-
-
