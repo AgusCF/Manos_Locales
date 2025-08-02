@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.rememberNavController
@@ -19,22 +19,26 @@ import com.undef.manoslocales.ui.theme.screens.favorite.FavoritesOnlyScreen
 import com.undef.manoslocales.ui.theme.screens.feed.FeedScreen
 import com.undef.manoslocales.ui.theme.screens.login.LoginScreen
 import com.undef.manoslocales.ui.theme.screens.register.RegisterScreen
+import com.undef.manoslocales.ui.theme.screens.settings.SettingsScreen
 import com.undef.manoslocales.ui.theme.screens.splash.SplashScreen
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
+import com.undef.manoslocales.viewmodel.SettingsViewModel
 import com.undef.manoslocales.viewmodel.UserViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ManosLocalesTheme {
                 val navController = rememberNavController()
-                // Creamos una sola instancia para compartir entre pantallas
-                val favoritesViewModel: FavoritesViewModel = viewModel()
-                val productViewModel: ProductViewModel = viewModel()
-                val userViewModel: UserViewModel = viewModel()
-                AppNavigation(navController, favoritesViewModel, productViewModel, userViewModel)
+                val favoritesViewModel: FavoritesViewModel = hiltViewModel()
+                val productViewModel: ProductViewModel = hiltViewModel()
+                val userViewModel: UserViewModel = hiltViewModel()
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
+                AppNavigation(navController, favoritesViewModel, productViewModel, userViewModel, settingsViewModel)
             }
         }
     }
@@ -45,28 +49,31 @@ fun AppNavigation(
     navController: NavHostController,
     favoritesViewModel: FavoritesViewModel,
     productViewModel: ProductViewModel,
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
-
         composable(Screen.Splash.route) {
             SplashScreen(navController)
         }
-
         composable(Screen.Login.route) {
             LoginScreen(
                 navController = navController,
-                userViewModel = userViewModel // 👈 Pasamos UserViewModel
+                userViewModel = userViewModel
             )
         }
-
         composable(Screen.Register.route) {
             RegisterScreen(
                 navController = navController,
-                userViewModel = userViewModel // 👈 Pasamos UserViewModel
+                userViewModel = userViewModel
             )
         }
-
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                navController = navController,
+                settingsViewModel = settingsViewModel
+            )
+        }
         composable(Screen.Feed.route) {
             FeedScreen(
                 navController = navController,
@@ -74,7 +81,6 @@ fun AppNavigation(
                 productViewModel = productViewModel
             )
         }
-
         composable(
             route = Screen.Detail.route,
             arguments = listOf(navArgument("productId") { type = NavType.IntType })
@@ -95,7 +101,6 @@ fun AppNavigation(
                 Text("Producto no encontrado")
             }
         }
-
         composable(Screen.FavoritesOnly.route) {
             FavoritesOnlyScreen(
                 navController = navController,

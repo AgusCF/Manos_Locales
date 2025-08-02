@@ -6,11 +6,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.viewmodel.UserViewModel
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.lint.kotlin.metadata.Visibility
 
 @Composable
 fun LoginScreen(
@@ -19,6 +24,7 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) } // <-- estado para mostrar/ocultar
     var showError by remember { mutableStateOf(false) }
 
     val loginResult by userViewModel.loginSuccess.collectAsState()
@@ -58,7 +64,17 @@ fun LoginScreen(
             onValueChange = { password = it },
             label = { Text("Contraseña") },
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                val image = if (showPassword)
+                    Icons.Filled.Visibility
+                else
+                    Icons.Filled.VisibilityOff
+
+                IconButton(onClick = { showPassword = !showPassword }) {
+                    Icon(imageVector = image, contentDescription = if (showPassword) "Ocultar contraseña" else "Mostrar contraseña")
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -66,7 +82,7 @@ fun LoginScreen(
 
         Button(
             onClick = {
-                showError = false // Resetear error antes del intento
+                showError = false
                 userViewModel.loginUser(email, password)
             },
             modifier = Modifier.fillMaxWidth()

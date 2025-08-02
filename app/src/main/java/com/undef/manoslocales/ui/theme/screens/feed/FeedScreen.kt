@@ -40,12 +40,11 @@ fun FeedScreen(
     val error by productViewModel.errorMessage.collectAsState(initial = null)
     val favorites by favoritesViewModel.favorites.collectAsState()
 
-
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Todas") }
     var expanded by remember { mutableStateOf(false) }
 
-    val coroutineScope = rememberCoroutineScope() // <-- esta línea es esencial
+    val coroutineScope = rememberCoroutineScope()
 
     val categories = remember(products) {
         listOf("Todas") + products.map { it.category }.distinct()
@@ -65,12 +64,17 @@ fun FeedScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Productos Manos Locales") },
-//                title = { Text("Productos Locales") },
                 actions = {
                     IconButton(onClick = {
                         navController.navigate(Screen.FavoritesOnly.route)
                     }) {
                         Icon(Icons.Default.Favorite, contentDescription = "Ver favoritos")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = {
+                        navController.navigate(Screen.Settings.route)
+                    }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Configuración")
                     }
                 }
             )
@@ -97,9 +101,11 @@ fun FeedScreen(
             )
 
             // 🎯 Filtro por categoría
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
                 OutlinedButton(
                     onClick = { expanded = true },
                     modifier = Modifier.fillMaxWidth()
@@ -152,7 +158,7 @@ fun FeedScreen(
                 }
             }
 
-            // 📦 Lista de productos
+            // 📦 Lista de productos filtrados (usás `products`, deberías usar `filteredProducts`)
             when {
                 isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -170,7 +176,8 @@ fun FeedScreen(
 
                 else -> {
                     LazyColumn {
-                        items(products) { product ->
+                        val listToShow = filteredProducts
+                        items(listToShow) { product ->
                             val isFavorite = favorites.any { it.id == product.id }
 
                             ProductCard(

@@ -3,13 +3,14 @@ package com.undef.manoslocales.data.remote
 import com.undef.manoslocales.data.model.Product
 import com.undef.manoslocales.data.model.User
 import com.undef.manoslocales.data.model.Favorite
+import com.undef.manoslocales.data.model.LoginResponse
 import retrofit2.Response
 import retrofit2.http.*
 
 interface ApiService {
     // Rutas públicas
     @POST("login")
-    suspend fun loginUser(@Body user: User): Response<User>
+    suspend fun loginUser(@Body credentials: Map<String, String>): Response<LoginResponse>
 
     @POST("register")
     suspend fun register(@Body user: User): User
@@ -30,11 +31,24 @@ interface ApiService {
     @POST("users/newUser")
     suspend fun newUser(@Body user: User): Response<Unit>
 
-    @PUT("users/{id}")
-    suspend fun updateUser(@Path("id") id: String, @Body user: User): User
+    @PUT("user/{id}")
+    suspend fun updateUser(
+        @Path("id") id: String,
+        @Body user: User
+    ): Response<Void>
 
     @POST("users/register")
     suspend fun registerUser(@Body user: User)
+
+    @PUT("user/{id}/password")
+    suspend fun updatedPassword(
+        @Path("id") id: String,
+        @Body request: PasswordChangeRequest
+    ): Response<Void>
+
+    //Rutas de Sttings
+    @GET("users/me")
+    suspend fun getCurrentUser(): Response<User>
 
     // Rutas de productos
     @GET("products")
@@ -50,27 +64,27 @@ interface ApiService {
     suspend fun createProduct(@Body product: Product): Product
 
     @PUT("products/{id}")
-    suspend fun updateProduct(@Path("id") id: String, @Body product: Product): Product
+    suspend fun updateProduct(@Path("id") id: Int, @Body product: Product): Product
 
     @DELETE("products/{id}")
-    suspend fun deleteProduct(@Path("id") id: String): Unit
+    suspend fun deleteProduct(@Path("id") id: Int): Unit
 
     // Rutas de favoritos
     @POST("fav/add")
     suspend fun addToFavorites(@Body favorite: Favorite): Favorite
 
     @GET("fav/{userId}")
-    suspend fun getFavorites(@Path("userId") userId: String): List<Favorite>
+    suspend fun getFavorites(@Path("userId") userid: Int): List<Favorite>
 
     @GET("fav/check/{userId}/{productId}")
-    suspend fun checkFavorite(@Path("userId") userId: String, @Path("productId") productId: String): Boolean
+    suspend fun checkFavorite(@Path("userId") userid: Int, @Path("productId") productid: Int): Boolean
 
     @DELETE("fav/remove/{id}")
-    suspend fun removeFavorite(@Path("id") id: String): Unit
+    suspend fun removeFavorite(@Path("id") id: Int): Unit
 
     @DELETE("fav/user/{userId}/product/{productId}")
-    suspend fun removeFavoriteByUserAndProduct(@Path("userId") userId: String, @Path("productId") productId: String): Unit
+    suspend fun removeFavoriteByUserAndProduct(@Path("userId") userId: String, @Path("productId") productid: Int): Unit
 
     @DELETE("fav/clear/{userId}")
-    suspend fun clearFavorites(@Path("userId") userId: String): Unit
+    suspend fun clearFavorites(@Path("userId") userid: Int): Unit
 }

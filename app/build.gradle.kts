@@ -2,7 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id ("kotlin-parcelize")
+    id("org.jetbrains.kotlin.kapt")
+    id("com.google.dagger.hilt.android")
+    id("kotlin-parcelize")
 }
 
 android {
@@ -28,20 +30,28 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
+        languageVersion = "2.0"
+        apiVersion = "2.0"
     }
+
     buildFeatures {
         compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.4"
     }
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -51,6 +61,33 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+    implementation(libs.transport.runtime)
+    implementation(libs.androidx.room.runtime)
+
+    // Navegación Compose
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // Retrofit + Gson + Coroutines
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Coil
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Accompanist
+    implementation("com.google.accompanist:accompanist-permissions:0.31.5-beta")
+
+    // Hilt
+    implementation(libs.hilt.android)
+    implementation(libs.androidx.animation.core.lint)
+    kapt("com.google.dagger:hilt-compiler:2.48")
+    implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
+
+    // Pruebas y tooling
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -58,27 +95,18 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    // Jetpack Compose
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("androidx.compose.material3:material3:1.2.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    implementation("androidx.compose.material3:material3:1.1.0")
+    implementation("androidx.compose.material:material-icons-extended:1.5.0") // para íconos extendidos
+}
 
-// Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+// ----------- AGREGADOS RECOMENDADOS -------------
 
-// Retrofit + Gson + Coroutines
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-// Coil (cargar imágenes)
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("io.coil-kt:coil-compose:2.4.0")
-
-// DataStore (para SharedPreferences moderno)
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
-
-// Accompanist (animaciones, permisos, etc. opcional)
-    implementation("com.google.accompanist:accompanist-permissions:0.31.5-beta")
+// Fuerza la versión Kotlin para evitar conflictos
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-reflect:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-compiler:2.0.21")
+    }
 }
