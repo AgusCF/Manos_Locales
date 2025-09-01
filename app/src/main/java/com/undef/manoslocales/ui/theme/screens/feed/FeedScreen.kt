@@ -10,27 +10,49 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.ui.theme.components.ProductCard
+import com.undef.manoslocales.viewmodel.AuthViewModel
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun FeedScreen(
     navController: NavController,
-    favoritesViewModel: FavoritesViewModel,
-    productViewModel: ProductViewModel = viewModel()
+    favoritesViewModel: FavoritesViewModel = hiltViewModel(),
+    productViewModel: ProductViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    // ✅ Cargar productos una sola vez al iniciar
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+    var hasRedirected by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn && !hasRedirected) {
+            hasRedirected = true
+            navController.navigate(Screen.Login.route) {
+                launchSingleTop = true
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
+    if (!isLoggedIn) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Verificando sesión...", style = MaterialTheme.typography.bodyLarge)
+        }
+        return
+    }
+
+    // Cargar productos una sola vez
     LaunchedEffect(Unit) {
         productViewModel.loadProducts()
     }
@@ -85,7 +107,6 @@ fun FeedScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-
             // 🔍 Búsqueda
             OutlinedTextField(
                 value = searchQuery,
@@ -158,7 +179,7 @@ fun FeedScreen(
                 }
             }
 
-            // 📦 Lista de productos filtrados (usás `products`, deberías usar `filteredProducts`)
+            // Lista de productos filtrados
             when {
                 isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

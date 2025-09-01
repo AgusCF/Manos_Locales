@@ -12,15 +12,33 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import com.undef.manoslocales.R
-import com.undef.manoslocales.ui.theme.Screen//Recordar
+import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.viewmodel.AuthViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
-fun SplashScreen(navController: NavController) {
-    // Espera 2 segundos y navega al login
-    LaunchedEffect(true) {
-        delay(2000)
-        navController.navigate(Screen.Login.route) {
-            popUpTo(0)
+fun SplashScreen(
+    navController: NavController,
+    authViewModel: AuthViewModel = hiltViewModel()
+) {
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+    var alreadyNavigated by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isLoggedIn) {
+        if (alreadyNavigated) return@LaunchedEffect
+        alreadyNavigated = true
+        // breve espera para que se vea splash
+        delay(1500)
+        if (isLoggedIn) {
+            navController.navigate(Screen.Feed.route) {
+                launchSingleTop = true
+                popUpTo(0) { inclusive = true }
+            }
+        } else {
+            navController.navigate(Screen.Login.route) {
+                launchSingleTop = true
+                popUpTo(0) { inclusive = true }
+            }
         }
     }
 

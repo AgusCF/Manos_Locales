@@ -1,79 +1,174 @@
 package com.undef.manoslocales.data.repository
 
 import android.content.Context
+import android.util.Log
+import com.undef.manoslocales.data.local.AuthTokenProvider
 import com.undef.manoslocales.data.model.User
+import com.undef.manoslocales.data.model.LoginResponse
 import com.undef.manoslocales.data.remote.ApiService
 import com.undef.manoslocales.data.remote.PasswordChangeRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import retrofit2.HttpException
 import retrofit2.Response
 
 @Singleton
-class UserRepository @Inject constructor(
+class DebugDev @Inject constructor(
     private val api: ApiService,
+    private val tokenProvider: AuthTokenProvider,
     @ApplicationContext private val context: Context
 ) {
-    private val prefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
 
     companion object {
-        private const val TOKEN_KEY = "auth_token"
-        private const val USER_ID_KEY = "user_id"
         private const val NOTIFICATIONS_ENABLED_KEY = "notifications_enabled"
     }
 
-    suspend fun getCurrentUser(): User? {
-        // Ajustá esto según tu API real. Si no existe endpoint "current user", necesitás
-        // primero obtener el ID almacenado y luego llamar getUserById.
-        val userId = getUserId() ?: return null
+    suspend fun loginUser(email: String, password: String): Pair<Boolean, String?> {
+        Log.i("DebugDev", "Iniciando login para email=$email")
         return try {
-            val response = api.getUserById(userId.toString())
-            response
+            val credentials = mapOf("email" to email, "password" to password)
+            val response: Response<LoginResponse> = api.loginUser(credentials)
+            if (response.isSuccessful) {
+                val body = response.body()
+                val token = body?.token
+                if (!token.isNullOrBlank()) {
+                    tokenProvider.saveToken(token)
+                    // intentar obtener userId por email del backend
+                    val user = try {
+                        api.getUserByMail(email)
+                    } catch (e: Exception) {
+                        Log.w("DebugDev", "No se pudo obtener usuario por email", e)
+                        null
+                    }
+                    val userId = user?.id
+                    if (userId != null) {
+                        tokenProvider.saveUserId(userId)
+                        Log.i("DebugDev", "Login successful, token e id guardados (id=$userId)")
+                        Pair(true, null)
+                    } else {
+                        Log.w("DebugDev", "Login exitoso pero no se obtuvo userId")
+                        Pair(true, null) // aún permitimos login pero sin userId
+                    }
+                } else {
+                    Log.w("DebugDev", "Login fallido: token no recibido")
+                    Pair(false, "Token no recibido")
+                }
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Error desconocido"
+                Log.w("DebugDev", "Login fallido: error del servidor: $errorBody")
+                Pair(false, "Error del servidor: $errorBody")
+            }
         } catch (e: Exception) {
+            Log.e("DebugDev", "Exception durante login", e)
+            Pair(false, "Error al iniciar sesión: ${e.localizedMessage ?: e.message}")
+        }
+    }
+
+    suspend fun registerUser(username: String, email: String, password: String): Pair<Boolean, String?> {
+        return try {
+            val user = User(username = username, email = email, password = password)
+            val response = api.newUser(user)
+            if (response.isSuccessful) {
+                Pair(true, null)
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Error desconocido"
+                Pair(false, "Error del servidor: $errorBody")
+            }
+        } catch (e: Exception) {
+            Log.e("DebugDev", "Exception during register", e)
+            Pair(false, "Error al registrar usuario: ${e.localizedMessage ?: e.message}")
+        }
+    }
+
+    suspend fun getCurrentUser(): User? {
+        val userId = tokenProvider.getUserId()
+        if (userId == null) {
+            Log.i("DebugDev", "No hay userId, no se puede obtener el usuario")
+            return null
+        }
+
+        Log.i("DebugDev", "Intentando obtener usuario por ID: $userId")
+        return try {
+            val user = api.getUserById(userId)
+            Log.i("DebugDev", "Usuario obtenido: $user")
+            user
+        } catch (e: HttpException) {
+            Log.e("DebugDev", "getCurrentUser failed: ${e.code()} ${e.response()?.errorBody()?.string()}", e)
+            null
+        } catch (e: Exception) {
+            Log.e("DebugDev", "Exception fetching current user by id", e)
             null
         }
     }
 
-    fun logout() {
-        prefs.edit().clear().apply()
-    }
-
-    fun saveToken(token: String) {
-        prefs.edit().putString(TOKEN_KEY, token).apply()
-    }
-
-    fun getToken(): String? {
-        return prefs.getString(TOKEN_KEY, null)
-    }
-
     suspend fun updateUser(user: User): Boolean {
-        // Asumo que user.id no es nullable; si lo es, el tipo debería reflejar eso.
-        val response: Response<Void> = api.updateUser(user.id.toString(), user)
-        // dependiendo de tu API, esto puede devolver el usuario actualizado o un status
-        return true // o chequear alguna condición en `response`
+        val id = user.id ?: run {
+            Log.w("DebugDev", "No se puede actualizar usuario sin id")
+            return false
+        }
+        return try {
+            val response: Response<Void> = api.updateUser(id.toString(), user)
+            if (!response.isSuccessful) {
+                Log.w("DebugDev", "updateUser no fue exitoso: ${response.code()} ${response.errorBody()?.string()}")
+            }
+            response.isSuccessful
+        } catch (e: Exception) {
+            Log.e("DebugDev", "Exception updating user", e)
+            false
+        }
     }
 
     suspend fun changePassword(newPassword: String): Boolean {
-        val userId = getUserId() ?: return false
-        // Asegurate de que `updatedPassword` exista realmente; el nombre en ApiService debe coincidir.
-        val response = api.updatedPassword(userId.toString(), PasswordChangeRequest(newPassword))
-        return (response as? Response<*>)?.isSuccessful ?: true
+        val userId = tokenProvider.getUserId()
+        if (userId == null) {
+            Log.w("DebugDev", "No hay userId para cambiar contraseña")
+            return false
+        }
+        return try {
+            val request = PasswordChangeRequest(password = newPassword)
+            val response = api.updatedPassword(userId.toString(), request)
+            if (!response.isSuccessful) {
+                Log.w(
+                    "DebugDev",
+                    "changePassword no fue exitoso: ${response.code()} ${response.errorBody()?.string()}"
+                )
+            }
+            response.isSuccessful
+        } catch (e: Exception) {
+            Log.e("DebugDev", "Exception changing password", e)
+            false
+        }
     }
 
-    private fun getUserId(): Int? {
-        return prefs.getInt(USER_ID_KEY, -1).takeIf { it != -1 }
+    fun logout() {
+        tokenProvider.clearAll()
     }
 
-    fun saveUserId(userId: Int) {
-        prefs.edit().putInt(USER_ID_KEY, userId).apply()
+    suspend fun clearUser() {
+        // Lógica para borrar datos del usuario, por ejemplo, de una base de datos local
     }
 
-    // Estas dos deberían vivir en PreferencesManager, no acá. Si las mantenés:
+    fun getToken(): String? = tokenProvider.getToken()
+    fun getUserId(): Int? = tokenProvider.getUserId()
+
+    suspend fun getUserById(id: Int?): User? {
+        if (id == null) return null
+        return try {
+            api.getUserById(id)
+        } catch (e: Exception) {
+            Log.e("DebugDev", "Exception fetching user by id", e)
+            null
+        }
+    }
+
     fun saveNotificationSetting(enabled: Boolean) {
-        prefs.edit().putBoolean(NOTIFICATIONS_ENABLED_KEY, enabled).apply()
+        context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+            .edit().putBoolean(NOTIFICATIONS_ENABLED_KEY, enabled).apply()
     }
 
     fun getNotificationSetting(): Boolean {
-        return prefs.getBoolean(NOTIFICATIONS_ENABLED_KEY, true)
+        return context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+            .getBoolean(NOTIFICATIONS_ENABLED_KEY, true)
     }
 }

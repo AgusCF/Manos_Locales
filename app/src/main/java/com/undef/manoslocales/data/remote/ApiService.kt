@@ -25,13 +25,16 @@ interface ApiService {
     @GET("users/by-tel")
     suspend fun getUserByTel(@Query("tel") tel: String): User
 
+    @GET("users/by-mail")
+    suspend fun getUserByMail(@Query("email") email: String): User
+
     @GET("users/{id}")
-    suspend fun getUserById(@Path("id") id: String): User
+    suspend fun getUserById(@Path("id") id: Int?): User
 
     @POST("users/newUser")
     suspend fun newUser(@Body user: User): Response<Unit>
 
-    @PUT("user/{id}")
+    @PUT("users/{id}")
     suspend fun updateUser(
         @Path("id") id: String,
         @Body user: User
@@ -40,15 +43,11 @@ interface ApiService {
     @POST("users/register")
     suspend fun registerUser(@Body user: User)
 
-    @PUT("user/{id}/password")
+    @PUT("users/newPass/{id}")
     suspend fun updatedPassword(
         @Path("id") id: String,
         @Body request: PasswordChangeRequest
     ): Response<Void>
-
-    //Rutas de Sttings
-    @GET("users/me")
-    suspend fun getCurrentUser(): Response<User>
 
     // Rutas de productos
     @GET("products")

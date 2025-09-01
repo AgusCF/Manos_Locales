@@ -12,13 +12,14 @@ import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.viewmodel.UserViewModel
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 @Composable
 fun RegisterScreen(
     navController: NavController,
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel = hiltViewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }

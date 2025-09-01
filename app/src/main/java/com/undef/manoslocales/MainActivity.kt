@@ -1,6 +1,7 @@
 package com.undef.manoslocales
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
@@ -8,9 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.undef.manoslocales.ui.theme.ManosLocalesTheme
 import com.undef.manoslocales.ui.theme.Screen
@@ -21,10 +22,11 @@ import com.undef.manoslocales.ui.theme.screens.login.LoginScreen
 import com.undef.manoslocales.ui.theme.screens.register.RegisterScreen
 import com.undef.manoslocales.ui.theme.screens.settings.SettingsScreen
 import com.undef.manoslocales.ui.theme.screens.splash.SplashScreen
+import com.undef.manoslocales.viewmodel.AuthViewModel
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
-import com.undef.manoslocales.viewmodel.SettingsViewModel
 import com.undef.manoslocales.viewmodel.UserViewModel
+import com.undef.manoslocales.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -38,7 +40,15 @@ class MainActivity : ComponentActivity() {
                 val productViewModel: ProductViewModel = hiltViewModel()
                 val userViewModel: UserViewModel = hiltViewModel()
                 val settingsViewModel: SettingsViewModel = hiltViewModel()
-                AppNavigation(navController, favoritesViewModel, productViewModel, userViewModel, settingsViewModel)
+                val authViewModel: AuthViewModel = hiltViewModel()
+                AppNavigation(
+                    navController = navController,
+                    favoritesViewModel = favoritesViewModel,
+                    productViewModel = productViewModel,
+                    userViewModel = userViewModel,
+                    settingsViewModel = settingsViewModel,
+                    authViewModel = authViewModel
+                )
             }
         }
     }
@@ -50,16 +60,19 @@ fun AppNavigation(
     favoritesViewModel: FavoritesViewModel,
     productViewModel: ProductViewModel,
     userViewModel: UserViewModel,
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    authViewModel: AuthViewModel
 ) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
-            SplashScreen(navController)
+            SplashScreen(navController, authViewModel)
         }
         composable(Screen.Login.route) {
+            Log.i("DebugDev", "Cargando LoginScreen")
             LoginScreen(
                 navController = navController,
-                userViewModel = userViewModel
+                userViewModel = userViewModel,
+                authViewModel = authViewModel
             )
         }
         composable(Screen.Register.route) {
@@ -69,16 +82,20 @@ fun AppNavigation(
             )
         }
         composable(Screen.Settings.route) {
+            Log.i("DebugDev", "Cargando SettingsScreen")
             SettingsScreen(
                 navController = navController,
-                settingsViewModel = settingsViewModel
+                settingsViewModel = settingsViewModel,
+                authViewModel = authViewModel
             )
         }
         composable(Screen.Feed.route) {
+            Log.i("DebugDev", "Cargando FeedScreen")
             FeedScreen(
                 navController = navController,
                 favoritesViewModel = favoritesViewModel,
-                productViewModel = productViewModel
+                productViewModel = productViewModel,
+                authViewModel = authViewModel
             )
         }
         composable(
