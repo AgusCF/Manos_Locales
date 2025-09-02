@@ -33,40 +33,36 @@ fun FeedScreen(
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
-    var hasRedirected by remember { mutableStateOf(false) }
+    var hasInitialized by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(isLoggedIn) {
-        if (!isLoggedIn && !hasRedirected) {
-            hasRedirected = true
-            navController.navigate(Screen.Login.route) {
-                launchSingleTop = true
-                popUpTo(0) { inclusive = true }
+    LaunchedEffect(Unit) {
+        if (!hasInitialized) {
+            hasInitialized = true
+            if (!isLoggedIn) {
+                navController.navigate(Screen.Access.route) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                }
+                return@LaunchedEffect
             }
+            productViewModel.loadProducts()
         }
     }
 
     if (!isLoggedIn) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Verificando sesión...", style = MaterialTheme.typography.bodyLarge)
-        }
         return
     }
 
-    // Cargar productos una sola vez
-    LaunchedEffect(Unit) {
-        productViewModel.loadProducts()
-    }
-
-    val products by productViewModel.products.collectAsState(initial = emptyList())
-    val isLoading by productViewModel.isLoading.collectAsState(initial = false)
-    val error by productViewModel.errorMessage.collectAsState(initial = null)
-    val favorites by favoritesViewModel.favorites.collectAsState()
-
+    // Estados de UI
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Todas") }
     var expanded by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
+
+    val products by productViewModel.products.collectAsState()
+    val isLoading by productViewModel.isLoading.collectAsState()
+    val error by productViewModel.errorMessage.collectAsState()
+    val favorites by favoritesViewModel.favorites.collectAsState()
 
     val categories = remember(products) {
         listOf("Todas") + products.map { it.category }.distinct()

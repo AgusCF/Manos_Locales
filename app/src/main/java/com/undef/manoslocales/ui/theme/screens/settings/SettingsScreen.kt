@@ -54,7 +54,7 @@ fun SettingsScreen(
         if (logoutSuccess) {
             authViewModel.logout()
             snackbarHostState.showSnackbar("Sesión cerrada correctamente")
-            navController.navigate(Screen.Login.route) {
+            navController.navigate(Screen.Access.route) {
                 launchSingleTop = true
                 popUpTo(0) { inclusive = true }
             }
@@ -77,27 +77,6 @@ fun SettingsScreen(
             settingsViewModel.clearChangePasswordResult()
         }
     }
-
-    var triedRedirect by remember { mutableStateOf(false) }
-/* 
-    // Navegar a LoginScreen solo si el usuario es null y NO está cargando, y nunca si ya hubo usuario cargado
-    LaunchedEffect(user, isLoading) {
-        if (user == null && !isLoading && !triedRedirect) {
-            kotlinx.coroutines.delay(1200)
-            // Si después del delay sigue sin usuario y sin loading, redirige
-            if (settingsViewModel.user.value == null && !settingsViewModel.isLoading.value) {
-                triedRedirect = true
-                navController.navigate(Screen.Login.route) {
-                    launchSingleTop = true
-                    popUpTo(0) { inclusive = true }
-                }
-            }
-        }
-        // Si el usuario se carga correctamente, resetea el flag
-        if (user != null) {
-            triedRedirect = false
-        }
-    } */
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },

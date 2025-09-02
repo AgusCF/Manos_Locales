@@ -84,6 +84,7 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     implementation(libs.androidx.animation.core.lint)
+    implementation(libs.androidx.runtime.saveable)
     kapt("com.google.dagger:hilt-compiler:2.48")
     implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
 
@@ -98,6 +99,9 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.1.0")
     implementation("androidx.compose.material:material-icons-extended:1.5.0") // para íconos extendidos
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    //Google Single Sign-On
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
 }
 
 // ----------- AGREGADOS RECOMENDADOS -------------

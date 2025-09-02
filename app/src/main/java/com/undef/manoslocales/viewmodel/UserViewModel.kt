@@ -3,7 +3,7 @@ package com.undef.manoslocales.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.undef.manoslocales.data.model.User
-import com.undef.manoslocales.data.repository.DebugDev
+import com.undef.manoslocales.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +12,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class UserViewModel @Inject constructor(
-    private val repository: DebugDev
+    private val repository: UserRepository
 ) : ViewModel() {
 
     private val _loginSuccess = MutableStateFlow<Boolean?>(null)

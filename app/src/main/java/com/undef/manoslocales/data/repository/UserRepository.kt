@@ -12,9 +12,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import retrofit2.HttpException
 import retrofit2.Response
+import kotlinx.coroutines.delay
 
 @Singleton
-class DebugDev @Inject constructor(
+class UserRepository @Inject constructor(
     private val api: ApiService,
     private val tokenProvider: AuthTokenProvider,
     @ApplicationContext private val context: Context
@@ -159,6 +160,80 @@ class DebugDev @Inject constructor(
         } catch (e: Exception) {
             Log.e("DebugDev", "Exception fetching user by id", e)
             null
+        }
+    }
+
+    suspend fun getUserByEmail(email: String): User? {
+        return try {
+            api.getUserByMail(email)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun createUserFromGoogle(username: String, email: String): User? {
+        return try {
+            val timestamp = System.currentTimeMillis()
+            val password = "Google${timestamp}Acc123"
+            
+            val newUser = User(
+                username = username,
+                email = email,
+                password = password,
+                role = "client"
+            )
+            
+            Log.d("DebugDev", "Intentando crear usuario Google: $newUser")
+            
+            try {
+                val response = api.newUser(newUser)
+                if (response.isSuccessful) {
+                    try {
+                        Log.d("DebugDev", "Usuario Google creado, obteniendo por email")
+                        api.getUserByMail(email)
+                    } catch (e: Exception) {
+                        Log.e("DebugDev", "Error al obtener usuario creado: ${e.message}")
+                        // Si falla obtener por email, intentar crear de nuevo
+                        null
+                    }
+                } else {
+                    Log.e("DebugDev", "Error al crear usuario: ${response.errorBody()?.string()}")
+                    null
+                }
+            } catch (e: java.net.SocketTimeoutException) {
+                Log.e("DebugDev", "Timeout al crear usuario Google. Reintentando...")
+                // Reintento después del timeout
+                delay(1000)
+                val response = api.newUser(newUser)
+                if (response.isSuccessful) {
+                    api.getUserByMail(email)
+                } else null
+            }
+        } catch (e: Exception) {
+            Log.e("DebugDev", "Excepción al crear usuario Google", e)
+            null
+        }
+    }
+
+    suspend fun saveGoogleSession(userId: Int): Boolean {
+        return try {
+            // Generar un token con formato similar al del backend
+            val timestamp = System.currentTimeMillis()
+            val token = "google_${userId}_${timestamp}"  // Token más significativo
+            
+            tokenProvider.saveUserId(userId)
+            tokenProvider.saveToken(token)
+            
+            // Verificar que se guardó correctamente
+            val savedToken = tokenProvider.getToken()
+            val savedUserId = tokenProvider.getUserId()
+            
+            Log.d("DebugDev", "Google session saved - token: $savedToken, userId: $savedUserId")
+            
+            savedToken != null && savedUserId != null
+        } catch (e: Exception) {
+            Log.e("DebugDev", "Error al guardar sesión de Google", e)
+            false
         }
     }
 

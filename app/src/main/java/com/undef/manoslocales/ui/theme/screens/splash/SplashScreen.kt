@@ -22,22 +22,24 @@ fun SplashScreen(
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
-    var alreadyNavigated by remember { mutableStateOf(false) }
+    val isInitialized by authViewModel.isInitialized.collectAsState()
+    var hasNavigated by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isLoggedIn) {
-        if (alreadyNavigated) return@LaunchedEffect
-        alreadyNavigated = true
-        // breve espera para que se vea splash
-        delay(1500)
+    LaunchedEffect(isInitialized, isLoggedIn) {
+        if (!isInitialized || hasNavigated) return@LaunchedEffect
+        
+        hasNavigated = true
+        delay(1500) // Mantener splash visible brevemente
+        
         if (isLoggedIn) {
             navController.navigate(Screen.Feed.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
                 launchSingleTop = true
-                popUpTo(0) { inclusive = true }
             }
         } else {
-            navController.navigate(Screen.Login.route) {
+            navController.navigate(Screen.Access.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
                 launchSingleTop = true
-                popUpTo(0) { inclusive = true }
             }
         }
     }

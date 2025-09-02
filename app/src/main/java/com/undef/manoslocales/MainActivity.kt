@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.undef.manoslocales.ui.theme.ManosLocalesTheme
 import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.ui.theme.screens.access.AccessScreen
 import com.undef.manoslocales.ui.theme.screens.detail.ProductDetailScreen
 import com.undef.manoslocales.ui.theme.screens.favorite.FavoritesOnlyScreen
 import com.undef.manoslocales.ui.theme.screens.feed.FeedScreen
@@ -65,7 +66,11 @@ fun AppNavigation(
 ) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
-            SplashScreen(navController, authViewModel)
+            Log.i("DebugDev", "Cargando SplashScreen")
+            SplashScreen(
+                navController = navController,
+                authViewModel = authViewModel
+            )
         }
         composable(Screen.Login.route) {
             Log.i("DebugDev", "Cargando LoginScreen")
@@ -76,6 +81,7 @@ fun AppNavigation(
             )
         }
         composable(Screen.Register.route) {
+            Log.i("DebugDev", "Cargando RegisterScreen")
             RegisterScreen(
                 navController = navController,
                 userViewModel = userViewModel
@@ -119,9 +125,19 @@ fun AppNavigation(
             }
         }
         composable(Screen.FavoritesOnly.route) {
+            Log.i("DebugDev", "Cargando FavoritesOnlyScreen")
             FavoritesOnlyScreen(
                 navController = navController,
                 favoritesViewModel = favoritesViewModel
+            )
+        }
+        composable(Screen.Access.route) {
+            Log.i("DebugDev", "Cargando AccessScreen")
+            AccessScreen(
+                navController = navController,
+                userViewModel = userViewModel,
+                authViewModel = authViewModel,
+                settingsViewModel = settingsViewModel
             )
         }
     }

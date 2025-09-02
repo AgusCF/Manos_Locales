@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.undef.manoslocales.data.local.preference.PreferencesManager
 import com.undef.manoslocales.data.model.User
-import com.undef.manoslocales.data.repository.DebugDev
+import com.undef.manoslocales.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val repository: DebugDev,
+    val repository: UserRepository,
     private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
