@@ -37,7 +37,7 @@ fun SplashScreen(
                 launchSingleTop = true
             }
         } else {
-            navController.navigate(Screen.Access.route) {
+            navController.navigate(Screen.Access.route) { 
                 popUpTo(Screen.Splash.route) { inclusive = true }
                 launchSingleTop = true
             }
