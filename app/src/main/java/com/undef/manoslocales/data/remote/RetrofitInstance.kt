@@ -7,6 +7,7 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 object RetrofitInstance {
 
@@ -29,7 +30,11 @@ object RetrofitInstance {
         chain.proceed(newRequest)
     }
 
+    // ✅ AGREGAR TIMEOUTS aquí
     private val client = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)  // ✅ Timeout para conectar
+        .readTimeout(10, TimeUnit.SECONDS)     // ✅ Timeout para leer respuesta
+        .writeTimeout(10, TimeUnit.SECONDS)    // ✅ Timeout para enviar datos
         .addInterceptor(authInterceptor)
         .build()
 

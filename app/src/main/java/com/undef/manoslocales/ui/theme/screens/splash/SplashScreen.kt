@@ -15,6 +15,7 @@ import com.undef.manoslocales.R
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.viewmodel.AuthViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.util.Log
 
 @Composable
 fun SplashScreen(
@@ -23,21 +24,48 @@ fun SplashScreen(
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     val isInitialized by authViewModel.isInitialized.collectAsState()
+    var hasCheckedAuth by remember { mutableStateOf(false) }
     var hasNavigated by remember { mutableStateOf(false) }
 
+    // ✅ INICIAR verificación de autenticación solo una vez
+    LaunchedEffect(Unit) {
+        if (!hasCheckedAuth) {
+            Log.d("DebugDev", "🔄 SplashScreen: Iniciando checkAuthStatus...")
+            authViewModel.checkAuthStatus()
+            hasCheckedAuth = true
+        }
+    }
+
+    // ✅ NAVEGAR cuando esté listo
     LaunchedEffect(isInitialized, isLoggedIn) {
-        if (!isInitialized || hasNavigated) return@LaunchedEffect
-        
-        hasNavigated = true
-        delay(1500) // Mantener splash visible brevemente
-        
-        if (isLoggedIn) {
-            navController.navigate(Screen.Feed.route) {
+        if (isInitialized && !hasNavigated) {
+            Log.d("DebugDev", "🎯 SplashScreen: isInitialized=$isInitialized, isLoggedIn=$isLoggedIn")
+
+            delay(1500) // Mantener splash visible
+
+            hasNavigated = true
+            val destination = if (isLoggedIn) {
+                Log.d("DebugDev", "➡️ Navegando a Feed (usuario logueado)")
+                Screen.Feed.route
+            } else {
+                Log.d("DebugDev", "➡️ Navegando a Access (usuario NO logueado)")
+                Screen.Access.route
+            }
+
+            navController.navigate(destination) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
                 launchSingleTop = true
             }
-        } else {
-            navController.navigate(Screen.Access.route) { 
+        }
+    }
+
+    // ✅ FALLBACK: Si después de 3 segundos no se inicializa, navegar a Access
+    LaunchedEffect(Unit) {
+        delay(3000) // Timeout de 3 segundos
+        if (!hasNavigated) {
+            Log.w("DebugDev", "⏰ SplashScreen: Timeout, navegando a Access")
+            hasNavigated = true
+            navController.navigate(Screen.Access.route) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
                 launchSingleTop = true
             }

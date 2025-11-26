@@ -23,6 +23,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.undef.manoslocales.R
+import com.undef.manoslocales.data.model.GoogleUser
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.viewmodel.AuthViewModel
 import com.undef.manoslocales.viewmodel.SettingsViewModel
@@ -35,15 +36,14 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AccessScreen(
     navController: NavController,
-    userViewModel: UserViewModel,    
-    authViewModel: AuthViewModel,    
-    settingsViewModel: SettingsViewModel  
+    userViewModel: UserViewModel,
+    authViewModel: AuthViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val userRepository = settingsViewModel.repository
-    
+
     // Configuración de Google Sign In
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -51,16 +51,16 @@ fun AccessScreen(
             .build()
     }
     val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
-    
+
     // Estados
     var isProcessingLogin by rememberSaveable { mutableStateOf(false) }
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
-    var hasNavigated by rememberSaveable { mutableStateOf(false) }
+    val isLoading by authViewModel.isLoading.collectAsState()
 
-    // Efecto para manejar la navegación cuando el usuario está logueado
+    // Efecto para navegación cuando el login es exitoso
     LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn && !hasNavigated) {
-            hasNavigated = true
+        if (isLoggedIn) {
+            Log.d("DebugDev", "🔄 Navegando a Feed después de login exitoso")
             navController.navigate(Screen.Feed.route) {
                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
                 launchSingleTop = true
@@ -71,41 +71,30 @@ fun AccessScreen(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (!isProcessingLogin) {
+        if (result.resultCode == Activity.RESULT_OK && !isProcessingLogin) {
             isProcessingLogin = true
-            
+
             scope.launch {
                 try {
+                    Log.d("DebugDev", "🔍 Procesando resultado de Google Sign-In...")
+
                     val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
                     val account = task.getResult(ApiException::class.java)
-                    val email = account?.email
-                    val nombre = account?.displayName ?: "GoogleUser"
 
-                    if (email != null) {
-                        withContext(Dispatchers.IO) {
-                            delay(500)
-                            val user = userRepository.getUserByEmail(email)
-                            
-                            if (user != null) {
-                                userRepository.saveGoogleSession(user.id ?: -1)
-                            } else {
-                                val created = userRepository.createUserFromGoogle(nombre, email)
-                                if (created != null) {
-                                    userRepository.saveGoogleSession(created.id ?: -1)
-                                }
-                            }
-                            
-                            delay(500)
-                            withContext(Dispatchers.Main) {
-                                authViewModel.refresh()
-                            }
-                        }
-                    }
+                    val googleUser = GoogleUser(
+                        email = account?.email ?: "",
+                        displayName = account?.displayName,
+                        id = account?.id
+                    )
+
+                    Log.d("DebugDev", "📧 Email de Google: ${googleUser.email}")
+
+                    // Usar el ViewModel en lugar de llamar al repository directamente
+                    authViewModel.signInWithGoogle(googleUser)
+
                 } catch (e: Exception) {
-                    Log.e("DebugDev", "Error en login Google: ${e.message}")
-                    withContext(Dispatchers.Main) {
-                        snackbarHostState.showSnackbar("Error al iniciar sesión con Google")
-                    }
+                    Log.e("DebugDev", "❌ Error en Google Sign-In: ${e.message}", e)
+                    snackbarHostState.showSnackbar("Error al iniciar sesión con Google: ${e.message}")
                 } finally {
                     isProcessingLogin = false
                 }
@@ -113,7 +102,17 @@ fun AccessScreen(
         }
     }
 
-    // UI
+    // Mostrar loading mientras procesa
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+
+    // UI normal
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
@@ -151,15 +150,23 @@ fun AccessScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = {
+                        Log.d("DebugDev", "🔄 Iniciando flujo Google Sign-In...")
                         // Forzar mostrar el selector de cuentas siempre
                         googleSignInClient.signOut().addOnCompleteListener {
                             val signInIntent = googleSignInClient.signInIntent
                             launcher.launch(signInIntent)
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(0.7f)
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                    enabled = !isLoading
                 ) {
-                    Text("Iniciar sesión con Google")
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Procesando...")
+                    } else {
+                        Text("Iniciar sesión con Google")
+                    }
                 }
             }
         }

@@ -12,7 +12,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import retrofit2.HttpException
 import retrofit2.Response
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 @Singleton
 class UserRepository @Inject constructor(
@@ -29,7 +30,17 @@ class UserRepository @Inject constructor(
         Log.i("DebugDev", "Iniciando login para email=$email")
         return try {
             val credentials = mapOf("email" to email, "password" to password)
-            val response: Response<LoginResponse> = api.loginUser(credentials)
+
+            // ✅ Agregar timeout específico para login
+            val response = try {
+                withTimeout(15000) { // 15 segundos máximo
+                    api.loginUser(credentials)
+                }
+            } catch (timeout: TimeoutCancellationException) {
+                Log.e("DebugDev", "⏰ Timeout en login")
+                return Pair(false, "El servidor no respondió. Intenta más tarde.")
+            }
+
             if (response.isSuccessful) {
                 val body = response.body()
                 val token = body?.token
@@ -57,12 +68,20 @@ class UserRepository @Inject constructor(
                 }
             } else {
                 val errorBody = response.errorBody()?.string() ?: "Error desconocido"
-                Log.w("DebugDev", "Login fallido: error del servidor: $errorBody")
                 Pair(false, "Error del servidor: $errorBody")
             }
         } catch (e: Exception) {
             Log.e("DebugDev", "Exception durante login", e)
-            Pair(false, "Error al iniciar sesión: ${e.localizedMessage ?: e.message}")
+
+            // ✅ Mensajes de error más específicos
+            val errorMessage = when {
+                e is TimeoutCancellationException -> "Timeout: El servidor no respondió"
+                e.message?.contains("socket", true) == true -> "Error de conexión. Verifica tu internet"
+                e.message?.contains("failed to connect", true) == true -> "No se puede conectar al servidor"
+                else -> "Error al iniciar sesión: ${e.localizedMessage ?: e.message}"
+            }
+
+            Pair(false, errorMessage)
         }
     }
 
@@ -173,44 +192,50 @@ class UserRepository @Inject constructor(
 
     suspend fun createUserFromGoogle(username: String, email: String): User? {
         return try {
-            val timestamp = System.currentTimeMillis()
-            val password = "Google${timestamp}Acc123"
-            
-            val newUser = User(
-                username = username,
-                email = email,
-                password = password,
-                role = "client"
-            )
-            
-            Log.d("DebugDev", "Intentando crear usuario Google: $newUser")
-            
+            Log.d("DebugDev", "🔍 Verificando si usuario Google existe: $email")
+
+            // 1. PRIMERO verificar si el usuario YA EXISTE
             try {
-                val response = api.newUser(newUser)
-                if (response.isSuccessful) {
-                    try {
-                        Log.d("DebugDev", "Usuario Google creado, obteniendo por email")
+                val existingUser = getUserByEmail(email)
+                Log.d("DebugDev", "✅ Usuario EXISTE, no necesita registro: $email")
+
+                // Devolver el usuario existente en lugar de crear uno nuevo
+                return existingUser
+
+            } catch (e: Exception) {
+                if (e is HttpException && e.code() == 404) {
+                    Log.d("DebugDev", "🆕 Usuario NUEVO, procediendo con registro: $email")
+
+                    // 2. SOLO si no existe, CREARLO
+                    val timestamp = System.currentTimeMillis()
+                    val password = "Google${timestamp}Acc123"
+
+                    val newUser = User(
+                        username = username,
+                        email = email,
+                        password = password,
+                        role = "client"
+                    )
+
+                    Log.d("DebugDev", "Intentando crear usuario Google: $newUser")
+
+                    val response = api.newUser(newUser)
+                    if (response.isSuccessful) {
+                        Log.d("DebugDev", "✅ Usuario Google creado exitosamente")
+                        // Obtener el usuario recién creado
                         api.getUserByMail(email)
-                    } catch (e: Exception) {
-                        Log.e("DebugDev", "Error al obtener usuario creado: ${e.message}")
-                        // Si falla obtener por email, intentar crear de nuevo
+                    } else {
+                        Log.e("DebugDev", "❌ Error al crear usuario: ${response.errorBody()?.string()}")
                         null
                     }
                 } else {
-                    Log.e("DebugDev", "Error al crear usuario: ${response.errorBody()?.string()}")
+                    // Otro tipo de error
+                    Log.e("DebugDev", "❌ Error al verificar usuario: ${e.message}")
                     null
                 }
-            } catch (e: java.net.SocketTimeoutException) {
-                Log.e("DebugDev", "Timeout al crear usuario Google. Reintentando...")
-                // Reintento después del timeout
-                delay(1000)
-                val response = api.newUser(newUser)
-                if (response.isSuccessful) {
-                    api.getUserByMail(email)
-                } else null
             }
         } catch (e: Exception) {
-            Log.e("DebugDev", "Excepción al crear usuario Google", e)
+            Log.e("DebugDev", "❌ Excepción al crear usuario Google", e)
             null
         }
     }
@@ -234,6 +259,56 @@ class UserRepository @Inject constructor(
         } catch (e: Exception) {
             Log.e("DebugDev", "Error al guardar sesión de Google", e)
             false
+        }
+    }
+
+    suspend fun quickGoogleAuth(username: String, email: String): Result<User> {
+        return try {
+            Log.d("DebugDev", "⚡ Quick Google Auth para: $email")
+
+            // Intentar obtener usuario existente con timeout
+            val user = try {
+                withTimeout(25000) { // ✅ 25 segundos timeout
+                    api.getUserByMail(email).also {
+                        Log.d("DebugDev", "✅ Usuario existente encontrado")
+                    }
+                }
+            } catch (timeout: TimeoutCancellationException) {
+                Log.e("DebugDev", "⏰ Timeout al verificar usuario existente")
+                return Result.failure(Exception("El servidor no respondió a tiempo"))
+            } catch (e: HttpException) {
+                if (e.code() == 404) {
+                    // Usuario no existe - crear
+                    Log.d("DebugDev", "🆕 Creando usuario rápido: $email")
+                    val newUser = User(
+                        username = username,
+                        email = email,
+                        password = "GoogleAuth123",
+                        role = "client"
+                    )
+
+                    try {
+                        withTimeout(25000) { // ✅ 25 segundos timeout
+                            api.register(newUser)
+                        }
+                    } catch (timeout: TimeoutCancellationException) {
+                        Log.e("DebugDev", "⏰ Timeout al crear usuario")
+                        return Result.failure(Exception("Timeout al crear usuario"))
+                    } catch (e: Exception) {
+                        Log.e("DebugDev", "❌ Error al crear usuario: ${e.message}")
+                        return Result.failure(e)
+                    }
+                } else {
+                    // Otro error HTTP
+                    Log.e("DebugDev", "❌ Error HTTP: ${e.code()} - ${e.message}")
+                    return Result.failure(e)
+                }
+            }
+
+            Result.success(user)
+        } catch (e: Exception) {
+            Log.e("DebugDev", "❌ Error en quickGoogleAuth: ${e.message}", e)
+            Result.failure(e)
         }
     }
 

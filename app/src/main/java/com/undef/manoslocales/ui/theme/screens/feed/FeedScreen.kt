@@ -45,6 +45,7 @@ fun FeedScreen(
                 return@LaunchedEffect
             }
             productViewModel.loadProducts()
+            favoritesViewModel.refreshFavorites() // ← AÑADIR ESTO
         }
     }
 

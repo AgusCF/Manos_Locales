@@ -24,6 +24,10 @@ class ProductViewModel : ViewModel() {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage
 
+    fun refreshProducts() {
+        loadProducts() // O tu método existente
+    }
+
     // Método para obtener todos los productos del backend
     fun loadProducts() {
         viewModelScope.launch {
