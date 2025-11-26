@@ -2,6 +2,7 @@ package com.undef.manoslocales.ui.theme.screens.login
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -85,7 +86,7 @@ fun LoginScreen(
                 title = { Text("Iniciar Sesión") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigate(Screen.Access.route) }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors()
