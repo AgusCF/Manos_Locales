@@ -5,6 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
     id("kotlin-parcelize")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -17,11 +18,33 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // ✅ SOLUCIÓN AL CONFLICTO
+    packaging {
+        resources {
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
+        }
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("${System.getProperty("user.home")}${File.separator}.android${File.separator}debug.keystore")
+            storePassword = "android"
+            keyAlias = "AndroidDebugKey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -52,6 +75,18 @@ android {
 }
 
 dependencies {
+
+    // Versiones compatibles de Compose
+    implementation(platform("androidx.compose:compose-bom:2023.10.01"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.activity:activity-compose:1.8.0")
+
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -97,16 +132,25 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("androidx.compose.material3:material3:1.1.0")
-    implementation("androidx.compose.material:material-icons-extended:1.5.0") // para íconos extendidos
+    implementation("androidx.compose.material:material-icons-extended:1.5.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
-    //Google Single Sign-On
+    // ✅ Google Sign-In (SOLO estas 3 - MÍNIMO FUNCIONAL)
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.android.gms:play-services-base:18.4.0")
+    implementation("androidx.browser:browser:1.7.0")
+
+    // Firebase BoM (Bill of Materials)
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+
+    // Dependencias de Firebase que necesites (elige las que uses):
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
 }
 
-// ----------- AGREGADOS RECOMENDADOS -------------
-
-// Fuerza la versión Kotlin para evitar conflictos
 configurations.all {
     resolutionStrategy {
         force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")

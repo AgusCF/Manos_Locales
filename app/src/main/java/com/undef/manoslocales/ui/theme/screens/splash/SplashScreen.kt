@@ -16,11 +16,12 @@ import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.viewmodel.AuthViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.util.Log
+import androidx.compose.material3.CircularProgressIndicator
 
 @Composable
 fun SplashScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     val isInitialized by authViewModel.isInitialized.collectAsState()
@@ -36,12 +37,13 @@ fun SplashScreen(
         }
     }
 
-    // ✅ NAVEGAR cuando esté listo
+    // ✅ NAVEGAR cuando esté listo - CON DELAY ADICIONAL PARA VERIFICACIÓN COMPLETA
     LaunchedEffect(isInitialized, isLoggedIn) {
         if (isInitialized && !hasNavigated) {
             Log.d("DebugDev", "🎯 SplashScreen: isInitialized=$isInitialized, isLoggedIn=$isLoggedIn")
 
-            delay(1500) // Mantener splash visible
+            // ⏰ DELAY ADICIONAL para asegurar que la verificación esté completa
+            delay(2500) // Aumentado a 2,5 segundos para dar tiempo a la verificación
 
             hasNavigated = true
             val destination = if (isLoggedIn) {
@@ -59,9 +61,9 @@ fun SplashScreen(
         }
     }
 
-    // ✅ FALLBACK: Si después de 3 segundos no se inicializa, navegar a Access
+    // ✅ FALLBACK: Si después de 5 segundos no se inicializa, navegar a Access
     LaunchedEffect(Unit) {
-        delay(3000) // Timeout de 3 segundos
+        delay(5000) // Aumentado timeout a 5 segundos
         if (!hasNavigated) {
             Log.w("DebugDev", "⏰ SplashScreen: Timeout, navegando a Access")
             hasNavigated = true
@@ -83,7 +85,15 @@ fun SplashScreen(
                 modifier = Modifier.size(160.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
+            Text("Bienvenidos a ", style = MaterialTheme.typography.titleLarge)
             Text("Manos Locales", style = MaterialTheme.typography.titleLarge)
+
+            // ⏰ Indicador de carga adicional
+            Spacer(modifier = Modifier.height(24.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp
+            )
         }
     }
 }

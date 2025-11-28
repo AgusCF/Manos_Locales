@@ -3,9 +3,12 @@ package com.undef.manoslocales
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -96,7 +99,11 @@ fun AppNavigation(
             )
         }
         composable(Screen.Feed.route) {
-            Log.i("DebugDev", "Cargando FeedScreen")
+            Log.i("DebugDev", "Cargando FeedScreen(MainActivity)")
+
+            // ✅ Evitar volver atrás desde Feed
+            BackHandler {}
+
             FeedScreen(
                 navController = navController,
                 favoritesViewModel = favoritesViewModel,
@@ -104,6 +111,7 @@ fun AppNavigation(
                 authViewModel = authViewModel
             )
         }
+
         composable(
             route = Screen.Detail.route,
             arguments = listOf(navArgument("productId") { type = NavType.IntType })
@@ -113,11 +121,11 @@ fun AppNavigation(
                 productViewModel.fetchProductById(productId)
             }
 
-            val product = productViewModel.selectedProduct
+            val product by productViewModel.selectedProduct.collectAsState()
             if (product != null) {
                 ProductDetailScreen(
                     navController = navController,
-                    product = product,
+                    product = product!!,
                     favoritesViewModel = favoritesViewModel
                 )
             } else {
@@ -132,7 +140,7 @@ fun AppNavigation(
             )
         }
         composable(Screen.Access.route) {
-            Log.i("DebugDev", "Cargando AccessScreen")
+            Log.i("DebugDev", "Cargando AccessScreen(MainActivity)")
             AccessScreen(
                 navController = navController,
                 userViewModel = userViewModel,
