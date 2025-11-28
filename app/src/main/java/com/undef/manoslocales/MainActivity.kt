@@ -1,27 +1,24 @@
 package com.undef.manoslocales
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.undef.manoslocales.data.sampleProducts
 import com.undef.manoslocales.ui.theme.ManosLocalesTheme
 import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.ui.theme.screens.access.AccessScreen
 import com.undef.manoslocales.ui.theme.screens.detail.ProductDetailScreen
 import com.undef.manoslocales.ui.theme.screens.favorite.FavoritesOnlyScreen
 import com.undef.manoslocales.ui.theme.screens.feed.FeedScreen
@@ -29,40 +26,90 @@ import com.undef.manoslocales.ui.theme.screens.login.LoginScreen
 import com.undef.manoslocales.ui.theme.screens.register.RegisterScreen
 import com.undef.manoslocales.ui.theme.screens.settings.SettingsScreen
 import com.undef.manoslocales.ui.theme.screens.splash.SplashScreen
+import com.undef.manoslocales.viewmodel.AuthViewModel
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
+import com.undef.manoslocales.viewmodel.ProductViewModel
+import com.undef.manoslocales.viewmodel.UserViewModel
+import com.undef.manoslocales.viewmodel.SettingsViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ManosLocalesTheme {
                 val navController = rememberNavController()
-                // Creamos una sola instancia para compartir entre pantallas
-                val favoritesViewModel: FavoritesViewModel = viewModel()
-                AppNavigation(navController, favoritesViewModel)
+                val favoritesViewModel: FavoritesViewModel = hiltViewModel()
+                val productViewModel: ProductViewModel = hiltViewModel()
+                val userViewModel: UserViewModel = hiltViewModel()
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
+                val authViewModel: AuthViewModel = hiltViewModel()
+                AppNavigation(
+                    navController = navController,
+                    favoritesViewModel = favoritesViewModel,
+                    productViewModel = productViewModel,
+                    userViewModel = userViewModel,
+                    settingsViewModel = settingsViewModel,
+                    authViewModel = authViewModel
+                )
             }
         }
     }
 }
 
-
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    favoritesViewModel: FavoritesViewModel
+    favoritesViewModel: FavoritesViewModel,
+    productViewModel: ProductViewModel,
+    userViewModel: UserViewModel,
+    settingsViewModel: SettingsViewModel,
+    authViewModel: AuthViewModel
 ) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
-            SplashScreen(navController)
+            Log.i("DebugDev", "Cargando SplashScreen")
+            SplashScreen(
+                navController = navController,
+                authViewModel = authViewModel
+            )
         }
         composable(Screen.Login.route) {
-            LoginScreen(navController)
+            Log.i("DebugDev", "Cargando LoginScreen")
+            LoginScreen(
+                navController = navController,
+                userViewModel = userViewModel,
+                authViewModel = authViewModel
+            )
         }
         composable(Screen.Register.route) {
-            RegisterScreen(navController)
+            Log.i("DebugDev", "Cargando RegisterScreen")
+            RegisterScreen(
+                navController = navController,
+                userViewModel = userViewModel
+            )
+        }
+        composable(Screen.Settings.route) {
+            Log.i("DebugDev", "Cargando SettingsScreen")
+            SettingsScreen(
+                navController = navController,
+                settingsViewModel = settingsViewModel,
+                authViewModel = authViewModel
+            )
         }
         composable(Screen.Feed.route) {
-            FeedScreen(navController, favoritesViewModel)
+            Log.i("DebugDev", "Cargando FeedScreen(MainActivity)")
+
+            // ✅ Evitar volver atrás desde Feed
+            BackHandler {}
+
+            FeedScreen(
+                navController = navController,
+                favoritesViewModel = favoritesViewModel,
+                productViewModel = productViewModel,
+                authViewModel = authViewModel
+            )
         }
 
         composable(
@@ -70,12 +117,15 @@ fun AppNavigation(
             arguments = listOf(navArgument("productId") { type = NavType.IntType })
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getInt("productId")
-            val product = sampleProducts.find { it.id == productId }
+            if (productId != null) {
+                productViewModel.fetchProductById(productId)
+            }
 
+            val product by productViewModel.selectedProduct.collectAsState()
             if (product != null) {
                 ProductDetailScreen(
                     navController = navController,
-                    product = product,
+                    product = product!!,
                     favoritesViewModel = favoritesViewModel
                 )
             } else {
@@ -83,7 +133,20 @@ fun AppNavigation(
             }
         }
         composable(Screen.FavoritesOnly.route) {
-            FavoritesOnlyScreen(navController, favoritesViewModel)
+            Log.i("DebugDev", "Cargando FavoritesOnlyScreen")
+            FavoritesOnlyScreen(
+                navController = navController,
+                favoritesViewModel = favoritesViewModel
+            )
+        }
+        composable(Screen.Access.route) {
+            Log.i("DebugDev", "Cargando AccessScreen(MainActivity)")
+            AccessScreen(
+                navController = navController,
+                userViewModel = userViewModel,
+                authViewModel = authViewModel,
+                settingsViewModel = settingsViewModel
+            )
         }
     }
 }

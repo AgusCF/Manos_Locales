@@ -1,38 +1,65 @@
 package com.undef.manoslocales.viewmodel
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.undef.manoslocales.data.model.Product
-import com.undef.manoslocales.data.remote.RetrofitInstance
+import com.undef.manoslocales.data.repository.ProductRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ProductViewModel : ViewModel() {
-    var products by mutableStateOf<List<Product>>(emptyList())
-        private set
+@HiltViewModel
+class ProductViewModel @Inject constructor(
+    private val repository: ProductRepository
+) : ViewModel() {
 
-    var isLoading by mutableStateOf(true)
-        private set
+    // Lista reactiva de productos
+    private val _products = MutableStateFlow<List<Product>>(emptyList())
+    val products: StateFlow<List<Product>> = _products
 
-    var errorMessage by mutableStateOf<String?>(null)
-        private set
+    // Producto seleccionado
+    private val _selectedProduct = MutableStateFlow<Product?>(null)
+    val selectedProduct: StateFlow<Product?> = _selectedProduct
 
-    init {
-        fetchProducts()
+    // Estados de carga y errores
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    fun refreshProducts() {
+        loadProducts()
     }
 
-    private fun fetchProducts() {
+    fun loadProducts() {
         viewModelScope.launch {
-            isLoading = true
+            _isLoading.value = true
+            _errorMessage.value = null
             try {
-                products = RetrofitInstance.api.getProducts()
-                errorMessage = null
+                val response = repository.getAllProducts()
+                _products.value = response
             } catch (e: Exception) {
-                errorMessage = "Error: ${e.message}"
+                _errorMessage.value = "Error al cargar los productos: ${e.message}"
             } finally {
-                isLoading = false
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun fetchProductById(productId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                val response = repository.getProductById(productId)
+                _selectedProduct.value = response
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al cargar el producto: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
         }
     }

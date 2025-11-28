@@ -2,55 +2,80 @@
 
 package com.undef.manoslocales.ui.theme.screens.feed
 
-
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
-import com.undef.manoslocales.data.sampleProducts
-import com.undef.manoslocales.ui.theme.components.ProductCard
-import com.undef.manoslocales.ui.theme.Screen
-import com.undef.manoslocales.viewmodel.FavoritesViewModel
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.ui.theme.components.ProductCard
+import com.undef.manoslocales.viewmodel.AuthViewModel
+import com.undef.manoslocales.viewmodel.FavoritesViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun FeedScreen(
     navController: NavController,
     favoritesViewModel: FavoritesViewModel,
-    productViewModel: ProductViewModel = viewModel()
+    productViewModel: ProductViewModel,
+    authViewModel: AuthViewModel
 ) {
-    val favorites = favoritesViewModel.favorites
-    val products = productViewModel.products
-    val isLoading = productViewModel.isLoading
-    val error = productViewModel.errorMessage
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+    var hasInitialized by rememberSaveable { mutableStateOf(false) }
 
+//    LaunchedEffect(Unit) {
+//        if (!hasInitialized) {
+//            hasInitialized = true
+//            if (!isLoggedIn) {
+//                navController.navigate(Screen.Access.route) {
+//                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+//                }
+//                return@LaunchedEffect
+//            }
+//            Log.d("DebugDev", "✅ Usuario logueado, cargando productos y favoritos")
+//            productViewModel.loadProducts()
+//            favoritesViewModel.refreshFavorites()
+//        }
+//    }
+    LaunchedEffect(Unit) {
+        authViewModel.isLoggedIn.collect { loggedIn ->
+            if (loggedIn) {
+                Log.d("DebugDev", "✅ Usuario logueado, cargando productos y favoritos")
+                productViewModel.loadProducts()
+                favoritesViewModel.refreshFavorites()
+            }
+        }
+    }
+
+    // Estados de UI
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Todas") }
     var expanded by remember { mutableStateOf(false) }
 
-    // Categorías dinámicas según los productos cargados
+    val coroutineScope = rememberCoroutineScope()
+
+    val products by productViewModel.products.collectAsState()
+    val isLoading by productViewModel.isLoading.collectAsState()
+    val error by productViewModel.errorMessage.collectAsState()
+    val favorites by favoritesViewModel.favorites.collectAsState()
+
     val categories = remember(products) {
         listOf("Todas") + products.map { it.category }.distinct()
     }
 
-    // Filtro por búsqueda y categoría
     val filteredProducts = products.filter { product ->
         val matchesSearch = product.name
             .split(" ", "-", ",", ".", "(", ")")
@@ -61,117 +86,101 @@ fun FeedScreen(
         matchesSearch && matchesCategory
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Productos Locales") },
-                actions = {
-                    IconButton(onClick = {
-                        navController.navigate(Screen.FavoritesOnly.route)
-                    }) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Ver favoritos")
-                    }
-                }
-            )
+
+    // ✅ UI condicional, sin return
+    if (!isLoggedIn) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Log.e("DebugDev","el isLoggedIn dio false")
+            CircularProgressIndicator()
         }
-    ) { padding ->
-        Column(modifier = Modifier
-            .padding(padding)
-            .fillMaxSize()) {
-
-            // 🔍 Búsqueda
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Buscar por nombre") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Buscar")
-                }
-            )
-
-            // 🎯 Filtro por categoría
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)) {
-                OutlinedButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Categoría: $selectedCategory")
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                }
-
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    categories.forEach { category ->
-                        DropdownMenuItem(
-                            text = { Text(category) },
-                            onClick = {
-                                selectedCategory = category
-                                expanded = false
-                            }
-                        )
+    } else {
+        Log.i("DebugDev","el isLoggedIn dio true")
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Productos Manos Locales") },
+                    actions = {
+                        IconButton(onClick = {
+                            navController.navigate(Screen.FavoritesOnly.route)
+                        }) {
+                            Icon(Icons.Default.Favorite, contentDescription = "Ver favoritos")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(onClick = {
+                            navController.navigate(Screen.Settings.route)
+                        }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Configuración")
+                        }
                     }
-                }
+                )
             }
-
-            // ❤️ Favoritos
-            if (favorites.isNotEmpty()) {
-                Text(
-                    text = "Tus Favoritos",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 16.dp, top = 16.dp)
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            ) {
+                // 🔍 Búsqueda
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Buscar por nombre") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = "Buscar")
+                    }
                 )
 
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 8.dp)
+                // 🎯 Filtro por categoría
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
                 ) {
-                    items(favorites) { product ->
-                        ProductCard(
-                            product = product,
-                            isFavorite = true,
-                            onFavoriteClick = {
-                                favoritesViewModel.toggleFavorite(product)
-                            },
-                            onClick = {
-                                navController.navigate(Screen.Detail.createRoute(product.id))
-                            }
-                        )
+                    OutlinedButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Categoría: $selectedCategory")
+                        Spacer(modifier = Modifier.weight(1f))
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    }
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category) },
+                                onClick = {
+                                    selectedCategory = category
+                                    expanded = false
+                                }
+                            )
+                        }
                     }
                 }
-            }
 
-            // 📦 Lista de productos
-            when {
-                isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                error != null -> {
+                // ❤️ Favoritos
+                if (favorites.isNotEmpty()) {
                     Text(
-                        text = "Ocurrió un error: $error",
-                        color = Color.Red,
-                        modifier = Modifier.padding(16.dp)
+                        text = "Tus Favoritos",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp)
                     )
-                }
 
-                else -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(filteredProducts) { product ->
-                            val isFav = favoritesViewModel.isFavorite(product)
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        items(favorites) { product ->
                             ProductCard(
                                 product = product,
-                                isFavorite = isFav,
+                                isFavorite = true,
                                 onFavoriteClick = {
                                     favoritesViewModel.toggleFavorite(product)
                                 },
@@ -182,11 +191,50 @@ fun FeedScreen(
                         }
                     }
                 }
+
+                // Lista de productos filtrados
+                when {
+                    isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+
+                    error != null -> {
+                        Text(
+                            text = "Ocurrió un error: $error",
+                            color = Color.Red,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn {
+                            val listToShow = filteredProducts
+                            items(listToShow) { product ->
+                                val isFavorite = favorites.any { it.id == product.id }
+
+                                ProductCard(
+                                    product = product,
+                                    isFavorite = isFavorite,
+                                    onFavoriteClick = {
+                                        favoritesViewModel.toggleFavorite(product)
+                                    },
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            delay(500)
+                                            navController.navigate(Screen.Detail.createRoute(product.id))
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
-
-
-
-

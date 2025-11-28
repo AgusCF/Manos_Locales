@@ -21,9 +21,8 @@ fun ProductDetailScreen(
     product: Product,
     favoritesViewModel: FavoritesViewModel
 ) {
-    val isFavorite = remember {
-        derivedStateOf { favoritesViewModel.isFavorite(product) }
-    }
+    val favorites by favoritesViewModel.favorites.collectAsState()
+    val isFavorite = favorites.any { it.id == product.id }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -46,10 +45,12 @@ fun ProductDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { favoritesViewModel.toggleFavorite(product) }
+                onClick = {
+                    favoritesViewModel.toggleFavorite(product)
+                }
             ) {
                 Text(
-                    if (isFavorite.value) "Quitar de Favoritos 💔" else "Agregar a Favoritos ❤️"
+                    if (isFavorite) "Quitar de Favoritos 💔" else "Agregar a Favoritos ❤️"
                 )
             }
 

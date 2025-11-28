@@ -1,7 +1,7 @@
 package com.undef.manoslocales.data
 
 import com.undef.manoslocales.data.model.Product
-
+/*
 val sampleProducts = listOf(
     Product(
         id = 1,
@@ -323,4 +323,4 @@ val sampleProducts = listOf(
         imageUrl = "x",
         category = "Artesanías"
     )
-)
+)*/
