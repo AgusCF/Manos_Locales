@@ -1,6 +1,7 @@
 package com.undef.manoslocales.ui.theme.screens.cart
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -32,6 +35,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.undef.manoslocales.ui.theme.Fondo
+import com.undef.manoslocales.ui.theme.RosaClaro
+import com.undef.manoslocales.ui.theme.RosaOscuro
+import com.undef.manoslocales.ui.theme.TextoPrincipal
 import com.undef.manoslocales.ui.theme.components.CartItemCard
 import com.undef.manoslocales.viewmodel.CartViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
@@ -55,7 +62,7 @@ fun CartScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Carrito") },
+                title = { Text("Carrito", color = TextoPrincipal) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -71,7 +78,10 @@ fun CartScreen(
                     }) {
                         Icon(Icons.Default.Delete, contentDescription = "Vaciar carrito")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = RosaClaro
+                )
             )
         }
     ) { padding ->
@@ -79,13 +89,18 @@ fun CartScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .background(Fondo)
         ) {
             if (cart.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("El carrito está vacío", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "El carrito está vacío",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextoPrincipal
+                    )
                 }
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
@@ -128,17 +143,23 @@ fun CartScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(RosaClaro)
                         .padding(16.dp)
                 ) {
                     Text(
                         text = "Total: \$${"%.2f".format(total)}",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextoPrincipal
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = { /* TODO */ },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = cart.isNotEmpty()
+                        enabled = cart.isNotEmpty(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = RosaOscuro,
+                            contentColor = androidx.compose.ui.graphics.Color.White
+                        )
                     ) {
                         Text("Finalizar compra")
                     }
