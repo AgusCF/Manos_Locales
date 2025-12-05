@@ -1,7 +1,6 @@
 package com.undef.manoslocales.data.repository
 
 import android.util.Log
-import com.undef.manoslocales.data.model.Cart
 import com.undef.manoslocales.data.model.CartAddRequest
 import com.undef.manoslocales.data.model.CartItem
 import com.undef.manoslocales.data.model.CartItemResponse
@@ -11,8 +10,7 @@ import com.undef.manoslocales.data.remote.RetrofitInstance
 import retrofit2.HttpException
 import javax.inject.Inject
 
-class CartRepository @Inject constructor(
-) {
+class CartRepository @Inject constructor(RetrofitInstance: RetrofitInstance) {
 
     suspend fun getCart(userId: Int): List<CartItemResponse> {
         return RetrofitInstance.api.getCart(userId)
@@ -26,14 +24,28 @@ class CartRepository @Inject constructor(
                 productId = item.productId,
                 quantity = item.quantity
             )
+            // Log payload JSON to debug mismatches with backend expectations
+            try {
+                val gson = com.google.gson.Gson()
+                val json = gson.toJson(request)
+                Log.d("DebugDev", "addToCart payload: $json")
+            } catch (e: Exception) {
+                Log.w("DebugDev", "No se pudo serializar payload de addToCart", e)
+            }
             val response = RetrofitInstance.api.addToCart(request)
             if (response.isSuccessful) {
+                Log.d("DebugDev", "addToCart OK: code=${response.code()}")
                 Result.success("Producto agregado al carrito")
             } else {
-                val errorMsg = when (response.code()) {
+                val code = response.code()
+                val body = try { response.errorBody()?.string() } catch (e: Exception) { null }
+                Log.w("DebugDev", "addToCart FAILED: code=$code, body=$body")
+
+                val errorMsg = when (code) {
                     400 -> "No hay suficiente stock"
                     404 -> "Producto no encontrado"
-                    else -> "Error al agregar al carrito"
+                    401 -> "No autorizado. Inicia sesión nuevamente"
+                    else -> "Error al agregar al carrito (code=$code)"
                 }
                 Result.failure(Exception(errorMsg))
             }
@@ -43,6 +55,10 @@ class CartRepository @Inject constructor(
                 404 -> "Producto no encontrado"
                 else -> "Error al agregar al carrito"
             }
+            try {
+                val errBody = e.response()?.errorBody()?.string()
+                Log.e("DebugDev", "addToCart HttpException: code=${e.code()} body=$errBody", e)
+            } catch (_: Exception) {}
             Result.failure(Exception(errorMsg))
         } catch (e: Exception) {
             Result.failure(Exception("Error de conexión"))

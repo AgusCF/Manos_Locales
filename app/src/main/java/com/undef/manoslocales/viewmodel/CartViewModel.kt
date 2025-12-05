@@ -25,8 +25,8 @@ class CartViewModel @Inject constructor(
     private val _cart = MutableStateFlow<List<CartItemResponse>>(emptyList())
     val cart: StateFlow<List<CartItemResponse>> = _cart
 
-    private val userId: Int
-        get() = tokenProvider.getUserId() ?: 0
+    private val userId: Int?
+        get() = tokenProvider.getUserId()
 
     init {
         loadCart()
@@ -34,7 +34,13 @@ class CartViewModel @Inject constructor(
 
     private fun loadCart() = viewModelScope.launch {
         try {
-            _cart.value = repository.getCart(userId)
+            val uid = userId
+            if (uid == null) {
+                Log.w("DebugDev", "No hay userId - no se carga carrito")
+                _cart.value = emptyList()
+                return@launch
+            }
+            _cart.value = repository.getCart(uid)
             Log.d("DebugDev", "✅ Carrito cargado: ${_cart.value.size} items")
         } catch (e: Exception) {
             Log.e("DebugDev", "❌ Error cargando carrito", e)
@@ -58,7 +64,14 @@ class CartViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
-            val result = repository.addItem(userId, item)
+            val uid = userId
+            if (uid == null || uid <= 0) {
+                val err = Exception("Usuario no logueado")
+                Log.w("DebugDev", "Intento de agregar al carrito sin userId")
+                onResult(Result.failure(err))
+                return@launch
+            }
+            val result = repository.addItem(uid, item)
             result.onSuccess {
                 loadCart()
                 Log.d("DebugDev", "✅ Producto agregado al carrito: ${product.name}")
@@ -77,6 +90,11 @@ class CartViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            val uid = userId
+            if (uid == null) {
+                onResult(Result.failure(Exception("Usuario no logueado")))
+                return@launch
+            }
             val result = repository.removeItem(item.id)
             result.onSuccess {
                 loadCart()
@@ -102,6 +120,11 @@ class CartViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            val uid = userId
+            if (uid == null) {
+                onResult(Result.failure(Exception("Usuario no logueado")))
+                return@launch
+            }
             val result = repository.updateQuantity(item.id, quantity)
             result.onSuccess {
                 loadCart()
@@ -115,7 +138,12 @@ class CartViewModel @Inject constructor(
 
     fun clearCart(onResult: (Result<String>) -> Unit) {
         viewModelScope.launch {
-            val result = repository.clearCart(userId)
+            val uid = userId
+            if (uid == null) {
+                onResult(Result.failure(Exception("Usuario no logueado")))
+                return@launch
+            }
+            val result = repository.clearCart(uid)
             result.onSuccess {
                 loadCart()
                 Log.d("DebugDev", "✅ Carrito vaciado")
@@ -128,7 +156,12 @@ class CartViewModel @Inject constructor(
 
     fun validateCart() = viewModelScope.launch {
         try {
-            val result = repository.validateCart(userId)
+            val uid = userId
+            if (uid == null) {
+                Log.w("DebugDev", "Usuario no logueado - no se valida carrito")
+                return@launch
+            }
+            val result = repository.validateCart(uid)
             if (!result.isValid) {
                 Log.w("DebugDev", "⚠️ Carrito inválido: ${result.invalidItems.size} items con problema")
                 result.invalidItems.forEach {
