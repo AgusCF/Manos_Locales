@@ -189,7 +189,7 @@ fun AccessScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedButton(
+                Button(
                     onClick = {
                         Log.d("DebugDev", "🔄 ===== INICIANDO GOOGLE SIGN-IN =====")
                         val signInIntent = googleSignInClient.signInIntent

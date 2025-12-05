@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.undef.manoslocales.ui.theme.ManosLocalesTheme
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.ui.theme.screens.access.AccessScreen
+import com.undef.manoslocales.ui.theme.screens.cart.CartScreen
 import com.undef.manoslocales.ui.theme.screens.detail.ProductDetailScreen
 import com.undef.manoslocales.ui.theme.screens.favorite.FavoritesOnlyScreen
 import com.undef.manoslocales.ui.theme.screens.feed.FeedScreen
@@ -27,6 +28,7 @@ import com.undef.manoslocales.ui.theme.screens.register.RegisterScreen
 import com.undef.manoslocales.ui.theme.screens.settings.SettingsScreen
 import com.undef.manoslocales.ui.theme.screens.splash.SplashScreen
 import com.undef.manoslocales.viewmodel.AuthViewModel
+import com.undef.manoslocales.viewmodel.CartViewModel
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
 import com.undef.manoslocales.viewmodel.UserViewModel
@@ -45,13 +47,15 @@ class MainActivity : ComponentActivity() {
                 val userViewModel: UserViewModel = hiltViewModel()
                 val settingsViewModel: SettingsViewModel = hiltViewModel()
                 val authViewModel: AuthViewModel = hiltViewModel()
+                val cartViewModel: CartViewModel = hiltViewModel()
                 AppNavigation(
                     navController = navController,
                     favoritesViewModel = favoritesViewModel,
                     productViewModel = productViewModel,
                     userViewModel = userViewModel,
                     settingsViewModel = settingsViewModel,
-                    authViewModel = authViewModel
+                    authViewModel = authViewModel,
+                    cartViewModel = cartViewModel
                 )
             }
         }
@@ -65,7 +69,8 @@ fun AppNavigation(
     productViewModel: ProductViewModel,
     userViewModel: UserViewModel,
     settingsViewModel: SettingsViewModel,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    cartViewModel: CartViewModel
 ) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
@@ -108,7 +113,8 @@ fun AppNavigation(
                 navController = navController,
                 favoritesViewModel = favoritesViewModel,
                 productViewModel = productViewModel,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                cartViewModel = cartViewModel
             )
         }
 
@@ -126,7 +132,8 @@ fun AppNavigation(
                 ProductDetailScreen(
                     navController = navController,
                     product = product!!,
-                    favoritesViewModel = favoritesViewModel
+                    favoritesViewModel = favoritesViewModel,
+                    cartViewModel = cartViewModel
                 )
             } else {
                 Text("Producto no encontrado")
@@ -136,7 +143,8 @@ fun AppNavigation(
             Log.i("DebugDev", "Cargando FavoritesOnlyScreen")
             FavoritesOnlyScreen(
                 navController = navController,
-                favoritesViewModel = favoritesViewModel
+                favoritesViewModel = favoritesViewModel,
+                cartViewModel = cartViewModel
             )
         }
         composable(Screen.Access.route) {
@@ -146,6 +154,14 @@ fun AppNavigation(
                 userViewModel = userViewModel,
                 authViewModel = authViewModel,
                 settingsViewModel = settingsViewModel
+            )
+        }
+        composable(Screen.Cart.route) {
+            Log.i("DebugDev", "Cargando CartScreen")
+            CartScreen(
+                navController = navController,
+                cartViewModel = cartViewModel,
+                productViewModel = productViewModel
             )
         }
     }
