@@ -176,11 +176,19 @@ fun FeedScreen(
                         contentPadding = PaddingValues(horizontal = 8.dp)
                     ) {
                         items(favorites) { product ->
+                            val isFavorite = favorites.any { it.id == product.id }
                             ProductCard(
                                 product = product,
-                                isFavorite = true,
-                                onFavoriteClick = {
-                                    favoritesViewModel.toggleFavorite(product)
+                                isFavorite = isFavorite,
+                                onFavoriteClick = { favoritesViewModel.toggleFavorite(product) },
+                                onAddToCart = {
+                                    cartViewModel.addItemFromProduct(product) { result ->
+                                        result.onSuccess { message ->
+                                            scope.launch { snackbarHostState.showSnackbar(message) }
+                                        }.onFailure { error ->
+                                            scope.launch { snackbarHostState.showSnackbar(error.message ?: "Error desconocido") }
+                                        }
+                                    }
                                 },
                                 onClick = {
                                     navController.navigate(Screen.Detail.createRoute(product.id))

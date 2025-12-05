@@ -26,7 +26,7 @@ fun ProductCard(
     product: Product,
     isFavorite: Boolean = false,
     onFavoriteClick: () -> Unit = {},
-    onAddToCart: () -> Unit = {}, // ✅ Nuevo
+    onAddToCart: () -> Unit = {},
     onClick: () -> Unit
 ) {
     Card(
@@ -39,14 +39,25 @@ fun ProductCard(
         Box {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
                     text = product.description,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Precio: \$${product.price}",
+                    text = "Precio: ${product.price}",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = product.category,
+                    style = MaterialTheme.typography.bodySmall
                 )
 
                 // ✅ Botón Agregar al carrito
