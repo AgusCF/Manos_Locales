@@ -21,9 +21,9 @@ import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Screen
 import com.undef.manoslocales.ui.theme.components.ProductCard
 import com.undef.manoslocales.viewmodel.AuthViewModel
+import com.undef.manoslocales.viewmodel.CartViewModel
 import com.undef.manoslocales.viewmodel.FavoritesViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -31,25 +31,12 @@ fun FeedScreen(
     navController: NavController,
     favoritesViewModel: FavoritesViewModel,
     productViewModel: ProductViewModel,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    cartViewModel: CartViewModel
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     var hasInitialized by rememberSaveable { mutableStateOf(false) }
 
-//    LaunchedEffect(Unit) {
-//        if (!hasInitialized) {
-//            hasInitialized = true
-//            if (!isLoggedIn) {
-//                navController.navigate(Screen.Access.route) {
-//                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
-//                }
-//                return@LaunchedEffect
-//            }
-//            Log.d("DebugDev", "✅ Usuario logueado, cargando productos y favoritos")
-//            productViewModel.loadProducts()
-//            favoritesViewModel.refreshFavorites()
-//        }
-//    }
     LaunchedEffect(Unit) {
         authViewModel.isLoggedIn.collect { loggedIn ->
             if (loggedIn) {
@@ -65,12 +52,14 @@ fun FeedScreen(
     var selectedCategory by remember { mutableStateOf("Todas") }
     var expanded by remember { mutableStateOf(false) }
 
-    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val products by productViewModel.products.collectAsState()
     val isLoading by productViewModel.isLoading.collectAsState()
     val error by productViewModel.errorMessage.collectAsState()
     val favorites by favoritesViewModel.favorites.collectAsState()
+    val cart by cartViewModel.cart.collectAsState()
 
     val categories = remember(products) {
         listOf("Todas") + products.map { it.category }.distinct()
@@ -86,20 +75,29 @@ fun FeedScreen(
         matchesSearch && matchesCategory
     }
 
-
-    // ✅ UI condicional, sin return
     if (!isLoggedIn) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Log.e("DebugDev","el isLoggedIn dio false")
+            Log.e("DebugDev", "el isLoggedIn dio false")
             CircularProgressIndicator()
         }
     } else {
-        Log.i("DebugDev","el isLoggedIn dio true")
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     title = { Text("Productos Manos Locales") },
                     actions = {
+                        IconButton(onClick = { navController.navigate(Screen.Cart.route) }) {
+                            BadgedBox(
+                                badge = {
+                                    if (cart.isNotEmpty()) {
+                                        Badge { Text("${cart.size}") }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito")
+                            }
+                        }
                         IconButton(onClick = {
                             navController.navigate(Screen.FavoritesOnly.route)
                         }) {
@@ -213,21 +211,24 @@ fun FeedScreen(
 
                     else -> {
                         LazyColumn {
-                            val listToShow = filteredProducts
-                            items(listToShow) { product ->
+                            items(filteredProducts) { product ->
                                 val isFavorite = favorites.any { it.id == product.id }
 
                                 ProductCard(
                                     product = product,
                                     isFavorite = isFavorite,
-                                    onFavoriteClick = {
-                                        favoritesViewModel.toggleFavorite(product)
+                                    onFavoriteClick = { favoritesViewModel.toggleFavorite(product) },
+                                    onAddToCart = {
+                                        cartViewModel.addItemFromProduct(product) { result ->
+                                            result.onSuccess { message ->
+                                                scope.launch { snackbarHostState.showSnackbar(message) }
+                                            }.onFailure { error ->
+                                                scope.launch { snackbarHostState.showSnackbar(error.message ?: "Error desconocido") }
+                                            }
+                                        }
                                     },
                                     onClick = {
-                                        coroutineScope.launch {
-                                            delay(500)
-                                            navController.navigate(Screen.Detail.createRoute(product.id))
-                                        }
+                                        navController.navigate(Screen.Detail.createRoute(product.id))
                                     }
                                 )
                             }

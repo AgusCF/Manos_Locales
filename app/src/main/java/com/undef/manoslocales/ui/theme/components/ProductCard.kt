@@ -26,6 +26,7 @@ fun ProductCard(
     product: Product,
     isFavorite: Boolean = false,
     onFavoriteClick: () -> Unit = {},
+    onAddToCart: () -> Unit = {}, // ✅ Nuevo
     onClick: () -> Unit
 ) {
     Card(
@@ -37,13 +38,6 @@ fun ProductCard(
     ) {
         Box {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Nombre y descripción
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = product.description,
                     style = MaterialTheme.typography.bodyMedium
@@ -54,6 +48,16 @@ fun ProductCard(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold
                 )
+
+                // ✅ Botón Agregar al carrito
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onAddToCart,
+                    enabled = product.stock > 0,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (product.stock > 0) "Agregar al carrito" else "Sin stock")
+                }
             }
 
             // ❤️ Ícono de favorito en la esquina superior derecha

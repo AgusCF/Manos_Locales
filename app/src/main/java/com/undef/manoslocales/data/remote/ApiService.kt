@@ -1,5 +1,10 @@
 package com.undef.manoslocales.data.remote
 
+import com.undef.manoslocales.data.model.Cart
+import com.undef.manoslocales.data.model.CartAddRequest
+import com.undef.manoslocales.data.model.CartItemResponse
+import com.undef.manoslocales.data.model.CartUpdateRequest
+import com.undef.manoslocales.data.model.CartValidationResponse
 import com.undef.manoslocales.data.model.Product
 import com.undef.manoslocales.data.model.User
 import com.undef.manoslocales.data.model.Favorite
@@ -86,4 +91,28 @@ interface ApiService {
 
     @DELETE("fav/clear/{userId}")
     suspend fun clearFavorites(@Path("userId") userid: Int): Unit
+
+    // ✅ Rutas de carrito (cart)
+    @GET("cart/{userId}")
+    suspend fun getCart(@Path("userId") userId: Int): List<CartItemResponse>
+
+    @POST("cart/add")
+    suspend fun addToCart(@Body request: CartAddRequest): Response<Unit>
+
+    @PUT("cart/update/{id}")
+    suspend fun updateCartItem(
+        @Path("id") id: Int,
+        @Body request: CartUpdateRequest
+    ): Response<Unit>
+
+    @DELETE("cart/remove/{id}")
+    suspend fun removeFromCart(
+        @Path("id") id: Int
+    ): Response<Unit>
+
+    @DELETE("cart/clear/{userId}")
+    suspend fun clearCart(@Path("userId") userId: Int): Response<Unit>
+
+    @GET("cart/validate/{userId}")
+    suspend fun validateCart(@Path("userId") userId: Int): CartValidationResponse
 }
