@@ -111,6 +111,7 @@ fun CartScreen(
                                 }
                             },
                             onRemove = {
+                                Log.i("CartScreen","Toco remover - itemId=${item.id}")
                                 cartViewModel.removeItem(item.id) { result ->
                                     result.onFailure { error ->
                                         Log.w("CartScreen", "Error al eliminar: ${error.message}")

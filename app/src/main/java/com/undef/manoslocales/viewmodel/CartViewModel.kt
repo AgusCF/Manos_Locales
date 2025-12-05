@@ -82,55 +82,47 @@ class CartViewModel @Inject constructor(
         }
     }
 
-    fun removeItem(productId: Int, onResult: (Result<String>) -> Unit) {
-        val item = _cart.value.find { it.product_id == productId }
-        if (item == null) {
-            onResult(Result.failure(Exception("Producto no encontrado en el carrito")))
-            return
-        }
-
+    fun removeItem(itemId: Int, onResult: (Result<String>) -> Unit) {
+        Log.d("DebugDev", "removeItem llamado con itemId=$itemId")
         viewModelScope.launch {
             val uid = userId
             if (uid == null) {
+                Log.w("DebugDev", "Usuario no logueado")
                 onResult(Result.failure(Exception("Usuario no logueado")))
                 return@launch
             }
-            val result = repository.removeItem(item.id)
+            val result = repository.removeItem(itemId)
             result.onSuccess {
+                Log.d("DebugDev", "✅ Producto eliminado del carrito: itemId $itemId")
                 loadCart()
-                Log.d("DebugDev", "✅ Producto eliminado del carrito: ID $productId")
-            }.onFailure {
-                Log.e("DebugDev", "❌ Error eliminando producto del carrito", it)
+            }.onFailure { error ->
+                Log.e("DebugDev", "❌ Error eliminando producto del carrito", error)
             }
             onResult(result)
         }
     }
 
-    fun updateQuantity(productId: Int, quantity: Int, onResult: (Result<String>) -> Unit) {
+    fun updateQuantity(itemId: Int, quantity: Int, onResult: (Result<String>) -> Unit) {
+        Log.d("DebugDev", "updateQuantity llamado con itemId=$itemId, newQty=$quantity")
         if (quantity <= 0) {
             Log.w("DebugDev", "⚠️ Cantidad inválida: $quantity")
-            onResult(Result.failure(Exception("Cantidad inválida")))
-            return
-        }
-
-        val item = _cart.value.find { it.product_id == productId }
-        if (item == null) {
-            onResult(Result.failure(Exception("Producto no encontrado en el carrito")))
+            onResult(Result.failure(Exception("Cantidad debe ser mayor a 0")))
             return
         }
 
         viewModelScope.launch {
             val uid = userId
             if (uid == null) {
+                Log.w("DebugDev", "Usuario no logueado")
                 onResult(Result.failure(Exception("Usuario no logueado")))
                 return@launch
             }
-            val result = repository.updateQuantity(item.id, quantity)
+            val result = repository.updateQuantity(itemId, quantity)
             result.onSuccess {
+                Log.d("DebugDev", "✅ Cantidad actualizada: itemId $itemId → $quantity")
                 loadCart()
-                Log.d("DebugDev", "✅ Cantidad actualizada: Producto $productId → $quantity")
-            }.onFailure {
-                Log.e("DebugDev", "❌ Error actualizando cantidad", it)
+            }.onFailure { error ->
+                Log.e("DebugDev", "❌ Error actualizando cantidad", error)
             }
             onResult(result)
         }
