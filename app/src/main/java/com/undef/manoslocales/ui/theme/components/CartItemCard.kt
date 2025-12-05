@@ -19,6 +19,7 @@ import com.undef.manoslocales.ui.theme.TextoPrincipal
 @Composable
 fun CartItemCard(
     item: CartItemResponse,
+    maxStock: Int,
     onQuantityChange: (Int) -> Unit,
     onRemove: () -> Unit
 ) {
@@ -44,7 +45,7 @@ fun CartItemCard(
                     color = TextoPrincipal
                 )
                 Text(
-                    "Precio: \$${item.price}",
+                    "Precio: ${item.price}",
                     style = MaterialTheme.typography.bodySmall,
                     color = RosaOscuro
                 )
@@ -72,12 +73,13 @@ fun CartItemCard(
                 
                 // Botón Sumar
                 IconButton(
-                    onClick = { onQuantityChange(item.quantity + 1) }
+                    onClick = { onQuantityChange(item.quantity + 1) },
+                    enabled = item.quantity > maxStock
                 ) {
                     Icon(
                         Icons.Default.Add,
                         contentDescription = "Sumar",
-                        tint = RosaOscuro
+                        tint = if (item.quantity < maxStock) RosaOscuro else Color.Gray
                     )
                 }
                 

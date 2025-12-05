@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Fondo
@@ -107,6 +108,8 @@ fun CartScreen(
                     items(cart) { item ->
                         CartItemCard(
                             item = item,
+                            maxStock = productViewModel.products.value
+                                .find { it.id == item.product_id }?.stock ?: 0,
                             onQuantityChange = { newQty ->
                                 val product = productViewModel.products.value
                                     .find { it.id == item.product_id }
@@ -126,7 +129,7 @@ fun CartScreen(
                                 }
                             },
                             onRemove = {
-                                Log.i("CartScreen","Toco remover - itemId=${item.id}")
+                                Log.i("CartScreen", "Toco remover - itemId=${item.id}")
                                 cartViewModel.removeItem(item.id) { result ->
                                     result.onFailure { error ->
                                         Log.w("CartScreen", "Error al eliminar: ${error.message}")
@@ -158,7 +161,7 @@ fun CartScreen(
                         enabled = cart.isNotEmpty(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = RosaOscuro,
-                            contentColor = androidx.compose.ui.graphics.Color.White
+                            contentColor = Color.White
                         )
                     ) {
                         Text("Finalizar compra")

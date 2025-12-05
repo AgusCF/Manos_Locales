@@ -50,13 +50,30 @@ fun ProductDetailScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(product.description)
+                Text(
+                    text = product.description,
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Precio: \$${product.price}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Precio: ${product.price}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = product.category,
+                    style = MaterialTheme.typography.bodySmall
+                )
 
+                // ✅ Botón Agregar al favoritos
+                Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = {
                         favoritesViewModel.toggleFavorite(product)
