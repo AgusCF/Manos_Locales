@@ -346,7 +346,36 @@ fun SettingsScreen(
                     Switch(
                         checked = biometricEnabled,
                         onCheckedChange = { enabled ->
-                            settingsViewModel.setBiometricEnabled(enabled)
+                            // Si se intenta deshabilitar (enabled=false) y actualmente está habilitado (biometricEnabled=true)
+                            if (!enabled && biometricEnabled) {
+                                // Solicitar biometría antes de deshabilitar
+                                if (activity != null && BiometricAuth.canAuthenticate(context)) {
+                                    BiometricAuth.authenticate(
+                                        activity = activity,
+                                        title = "Desactivar desbloqueo biométrico",
+                                        subtitle = "Confirma tu identidad",
+                                        onSuccess = {
+                                            Log.d("DebugDev", "✅ Biometría confirmada, deshabilitando")
+                                            settingsViewModel.setBiometricEnabled(false)
+                                        },
+                                        onError = { err ->
+                                            Log.e("DebugDev", "❌ Error biométrico al deshabilitar: $err")
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("No se pudo confirmar identidad")
+                                            }
+                                        },
+                                        onFail = {
+                                            Log.w("DebugDev", "⚠️ Biometría cancelada al deshabilitar")
+                                        }
+                                    )
+                                } else {
+                                    // Si no hay biometría disponible, permitir deshabilitar
+                                    settingsViewModel.setBiometricEnabled(false)
+                                }
+                            } else {
+                                // Si se habilita, permitir directamente
+                                settingsViewModel.setBiometricEnabled(enabled)
+                            }
                         }
                     )
                 }
