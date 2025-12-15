@@ -2,7 +2,7 @@ package com.undef.manoslocales
 
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
@@ -36,7 +36,7 @@ import com.undef.manoslocales.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -77,7 +77,8 @@ fun AppNavigation(
             Log.i("DebugDev", "Cargando SplashScreen")
             SplashScreen(
                 navController = navController,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                settingsViewModel = settingsViewModel
             )
         }
         composable(Screen.Login.route) {

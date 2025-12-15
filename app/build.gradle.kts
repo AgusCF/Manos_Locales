@@ -150,6 +150,9 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // Biometría (Huella/Face/credencial del dispositivo)
+    implementation("androidx.biometric:biometric:1.1.0")
 }
 
 configurations.all {

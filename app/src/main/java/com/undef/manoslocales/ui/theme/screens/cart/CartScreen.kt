@@ -23,26 +23,34 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
 import com.undef.manoslocales.ui.theme.Fondo
 import com.undef.manoslocales.ui.theme.RosaClaro
 import com.undef.manoslocales.ui.theme.RosaOscuro
 import com.undef.manoslocales.ui.theme.TextoPrincipal
 import com.undef.manoslocales.ui.theme.components.CartItemCard
+import com.undef.manoslocales.util.BiometricAuth
 import com.undef.manoslocales.viewmodel.CartViewModel
 import com.undef.manoslocales.viewmodel.ProductViewModel
+import com.undef.manoslocales.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,13 +60,63 @@ fun CartScreen(
     cartViewModel: CartViewModel,
     productViewModel: ProductViewModel
 ) {
+    // Gate biométrico opcional para carrito
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
+    val biometricEnabled by settingsViewModel.biometricEnabled.collectAsState(initial = false)
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    val required = biometricEnabled && BiometricAuth.canAuthenticate(context) && activity != null
+    var biometricPassed by remember { mutableStateOf(!required) }
+
+    LaunchedEffect(required) {
+        if (required && !biometricPassed && activity != null) {
+            BiometricAuth.authenticate(
+                activity = activity,
+                title = "Confirmar para ver el carrito",
+                subtitle = "Usa tu huella o Face ID",
+                onSuccess = { biometricPassed = true },
+                onError = { /* sin bloqueo permanente; mostrar UI abajo */ },
+                onFail = { /* reintento manual */ }
+            )
+        }
+    }
+
+    if (!biometricPassed) {
+        // Pantalla de espera/reintento
+        Scaffold { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(Fondo),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Autenticación requerida", style = MaterialTheme.typography.titleMedium, color = TextoPrincipal)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = {
+                        if (activity != null) {
+                            BiometricAuth.authenticate(
+                                activity = activity,
+                                title = "Confirmar para ver el carrito",
+                                subtitle = "Usa tu huella o Face ID",
+                                onSuccess = { biometricPassed = true },
+                                onError = { },
+                                onFail = { }
+                            )
+                        }
+                    }) {
+                        Text("Reintentar")
+                    }
+                }
+            }
+        }
+        return
+    }
+
     val cart by cartViewModel.cart.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        cartViewModel.validateCart()
-    }
 
     Scaffold(
         topBar = {
@@ -84,7 +142,8 @@ fun CartScreen(
                     containerColor = RosaClaro
                 )
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier

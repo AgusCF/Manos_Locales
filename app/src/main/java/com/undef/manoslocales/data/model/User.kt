@@ -7,7 +7,7 @@ import kotlinx.parcelize.Parcelize
 data class User (
     val id: Int? = null,
     val username: String,
-    val password: String,
+    val password: String? = null,
     val role: String = "client", // Valor predeterminado
     val email: String,
     val tel: String = ""

@@ -96,6 +96,16 @@ fun AccessScreen(
 
     val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
 
+    // 🔒 Evitar sesión automática tras reinstalar: forzar signOut al abrir Access
+    LaunchedEffect(Unit) {
+        try {
+            googleSignInClient.signOut()
+            Log.d("DebugDev", "🔒 GoogleSignIn: signOut() ejecutado para evitar auto login")
+        } catch (e: Exception) {
+            Log.w("DebugDev", "⚠️ No se pudo ejecutar signOut en inicio: ${e.message}")
+        }
+    }
+
     // ✅ Lanzador para resultado de Google Sign-In
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()

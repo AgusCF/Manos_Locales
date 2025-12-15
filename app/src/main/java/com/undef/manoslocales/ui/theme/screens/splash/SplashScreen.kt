@@ -17,16 +17,26 @@ import com.undef.manoslocales.viewmodel.AuthViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.util.Log
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.platform.LocalContext
+import androidx.fragment.app.FragmentActivity
+import com.undef.manoslocales.util.BiometricAuth
+import com.undef.manoslocales.viewmodel.SettingsViewModel
 
 @Composable
 fun SplashScreen(
     navController: NavController,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     val isInitialized by authViewModel.isInitialized.collectAsState()
+    val biometricEnabled by settingsViewModel.biometricEnabled.collectAsState(initial = false)
     var hasCheckedAuth by remember { mutableStateOf(false) }
     var hasNavigated by remember { mutableStateOf(false) }
+    var biometricPassed by remember { mutableStateOf(false) }
+    var biometricAttempted by remember { mutableStateOf(false) }
+    var lastBiometricError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     // ✅ INICIAR verificación de autenticación solo una vez
     LaunchedEffect(Unit) {
@@ -37,23 +47,65 @@ fun SplashScreen(
         }
     }
 
-    // ✅ NAVEGAR cuando esté listo - CON DELAY ADICIONAL PARA VERIFICACIÓN COMPLETA
-    LaunchedEffect(isInitialized, isLoggedIn) {
-        if (isInitialized && !hasNavigated) {
-            Log.d("DebugDev", "🎯 SplashScreen: isInitialized=$isInitialized, isLoggedIn=$isLoggedIn")
-
-            // ⏰ DELAY ADICIONAL para asegurar que la verificación esté completa
-            delay(2500) // Aumentado a 2,5 segundos para dar tiempo a la verificación
-
-            hasNavigated = true
-            val destination = if (isLoggedIn) {
-                Log.d("DebugDev", "➡️ Navegando a Feed (usuario logueado)")
-                Screen.Feed.route
+    // ✅ Mostrar biometría cuando sea necesario (separado de navegación)
+    LaunchedEffect(isInitialized, isLoggedIn, biometricEnabled) {
+        Log.d("DebugDev", "🎯 SplashScreen: Estado - isInitialized=$isInitialized, isLoggedIn=$isLoggedIn, biometricEnabled=$biometricEnabled, biometricAttempted=$biometricAttempted, biometricPassed=$biometricPassed")
+        
+        if (isInitialized && isLoggedIn && biometricEnabled && !biometricAttempted) {
+            Log.d("DebugDev", "🔐 SplashScreen: NECESITA BIOMETRÍA")
+            val activity = context as? FragmentActivity
+            if (activity != null && BiometricAuth.canAuthenticate(context)) {
+                biometricAttempted = true
+                Log.d("DebugDev", "🔐 SplashScreen: Mostrando prompt biométrico...")
+                BiometricAuth.authenticate(
+                    activity = activity,
+                    title = "Desbloquear Manos Locales",
+                    subtitle = "Usa huella o Face para continuar",
+                    onSuccess = {
+                        Log.d("DebugDev", "✅ SplashScreen: Biometría exitosa")
+                        biometricPassed = true
+                        lastBiometricError = null
+                    },
+                    onError = { err ->
+                        Log.e("DebugDev", "❌ SplashScreen: Error biométrico - $err")
+                        lastBiometricError = err
+                    },
+                    onFail = {
+                        Log.w("DebugDev", "⚠️ SplashScreen: Biometría cancelada, reintento disponible")
+                    }
+                )
             } else {
-                Log.d("DebugDev", "➡️ Navegando a Access (usuario NO logueado)")
-                Screen.Access.route
+                Log.w("DebugDev", "⚠️ SplashScreen: BiometricAuth no disponible, saltando")
+                biometricPassed = true
+            }
+        } else if (isInitialized && isLoggedIn && !biometricEnabled) {
+            Log.d("DebugDev", "✅ SplashScreen: Biometría DESHABILITADA, permitir entrada")
+        }
+    }
+
+    // ✅ NAVEGAR cuando esté todo listo
+    LaunchedEffect(isInitialized, isLoggedIn, biometricEnabled, biometricPassed, biometricAttempted) {
+        if (isInitialized && !hasNavigated) {
+            Log.d("DebugDev", "🎯 SplashScreen (NAVEGACIÓN): isInitialized=$isInitialized, isLoggedIn=$isLoggedIn, biometricEnabled=$biometricEnabled, biometricPassed=$biometricPassed, biometricAttempted=$biometricAttempted")
+            
+            // Si necesita biometría pero aún no la intentó, esperar
+            if (isLoggedIn && biometricEnabled && !biometricAttempted) {
+                Log.d("DebugDev", "⏳ SplashScreen: Esperando intento de biometría...")
+                return@LaunchedEffect
             }
 
+            // Si necesita biometría y no pasó, no navegar
+            if (isLoggedIn && biometricEnabled && !biometricPassed) {
+                Log.d("DebugDev", "🔒 SplashScreen: Biometría requerida pero no pasada, esperando reintento...")
+                return@LaunchedEffect
+            }
+
+            // ⏰ Pequeño delay para suavizar transición
+            delay(800)
+
+            hasNavigated = true
+            val destination = if (isLoggedIn) Screen.Feed.route else Screen.Access.route
+            Log.d("DebugDev", "➡️ SplashScreen: Navegando a $destination")
             navController.navigate(destination) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
                 launchSingleTop = true
@@ -94,6 +146,11 @@ fun SplashScreen(
                 modifier = Modifier.size(24.dp),
                 strokeWidth = 2.dp
             )
+
+            lastBiometricError?.let {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Error biométrico: $it")
+            }
         }
     }
 }

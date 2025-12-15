@@ -145,25 +145,4 @@ class CartViewModel @Inject constructor(
             onResult(result)
         }
     }
-
-    fun validateCart() = viewModelScope.launch {
-        try {
-            val uid = userId
-            if (uid == null) {
-                Log.w("DebugDev", "Usuario no logueado - no se valida carrito")
-                return@launch
-            }
-            val result = repository.validateCart(uid)
-            if (!result.isValid) {
-                Log.w("DebugDev", "⚠️ Carrito inválido: ${result.invalidItems.size} items con problema")
-                result.invalidItems.forEach {
-                    Log.w("DebugDev", "→ ${it.name}: pide ${it.requestedQuantity}, hay ${it.availableStock}")
-                }
-            } else {
-                Log.d("DebugDev", "✅ Carrito válido")
-            }
-        } catch (e: Exception) {
-            Log.e("DebugDev", "❌ Error validando carrito", e)
-        }
-    }
 }

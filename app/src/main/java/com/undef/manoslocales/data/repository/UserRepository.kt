@@ -3,6 +3,7 @@ package com.undef.manoslocales.data.repository
 import android.content.Context
 import android.util.Log
 import com.undef.manoslocales.data.local.AuthTokenProvider
+import com.undef.manoslocales.data.model.UpdateUserRequest
 import com.undef.manoslocales.data.model.User
 import com.undef.manoslocales.data.model.LoginResponse
 import com.undef.manoslocales.data.remote.ApiService
@@ -122,20 +123,29 @@ class UserRepository @Inject constructor(
         }
     }
 
-    suspend fun updateUser(user: User): Boolean {
+    suspend fun updateUser(user: User): User? {
         val id = user.id ?: run {
             Log.w("DebugDev", "No se puede actualizar usuario sin id")
-            return false
+            return null
         }
         return try {
-            val response: Response<Void> = api.updateUser(id.toString(), user)
-            if (!response.isSuccessful) {
+            // Enviar solo campos editables no vacíos (evita rechazos por campos vacíos)
+            val request = UpdateUserRequest(
+                username = user.username.takeIf { it.isNotBlank() },
+                tel = user.tel.takeIf { it.isNotBlank() }
+            )
+            val response: Response<User> = api.updateUser(id.toString(), request)
+            if (response.isSuccessful) {
+                val updated = response.body()
+                Log.d("DebugDev", "✅ Usuario actualizado en backend: $updated")
+                updated
+            } else {
                 Log.w("DebugDev", "updateUser no fue exitoso: ${response.code()} ${response.errorBody()?.string()}")
+                null
             }
-            response.isSuccessful
         } catch (e: Exception) {
             Log.e("DebugDev", "Exception updating user", e)
-            false
+            null
         }
     }
 
