@@ -1,5 +1,6 @@
 package com.undef.manoslocales.ui.theme.screens.settings
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,12 +12,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.fragment.app.FragmentActivity
 import com.undef.manoslocales.ui.theme.Screen
+import com.undef.manoslocales.util.BiometricAuth
 import com.undef.manoslocales.viewmodel.AuthViewModel
 import com.undef.manoslocales.viewmodel.SettingsViewModel
 
@@ -33,6 +37,8 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState(initial = true)
+    val biometricEnabled by settingsViewModel.biometricEnabled.collectAsState(initial = false)
+    val isGoogleUser by settingsViewModel.isGoogleUser.collectAsState(initial = false)
     val isLoading by settingsViewModel.isLoading.collectAsState()
     val errorMessage by settingsViewModel.errorMessage.collectAsState()
     val logoutSuccess by settingsViewModel.logoutSuccess.collectAsState()
@@ -44,6 +50,79 @@ fun SettingsScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var showPassword by remember { mutableStateOf(false) }
+
+    // Gate biométrico al abrir Configuración (si está habilitado y disponible)
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    val biometricRequired = biometricEnabled && BiometricAuth.canAuthenticate(context) && activity != null
+    var biometricPassed by remember { mutableStateOf(!biometricRequired) }
+
+    LaunchedEffect(biometricRequired) {
+        if (biometricRequired && !biometricPassed && activity != null) {
+            BiometricAuth.authenticate(
+                activity = activity,
+                title = "Desbloquear configuración",
+                subtitle = "Usa tu huella o Face ID",
+                onSuccess = { biometricPassed = true },
+                onError = { err -> scope.launch { snackbarHostState.showSnackbar("Error biométrico: $err") } },
+                onFail = { }
+            )
+        }
+    }
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            Log.d("DebugDev", "📢 SettingsScreen: Mostrando error al usuario: $errorMessage")
+            scope.launch {
+                snackbarHostState.showSnackbar(errorMessage!!)
+                settingsViewModel.clearError()
+            }
+        }
+    }
+
+    if (!biometricPassed) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = { Text("Configuración") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors()
+                )
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Autenticación requerida", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = {
+                        if (activity != null) {
+                            BiometricAuth.authenticate(
+                                activity = activity,
+                                title = "Desbloquear configuración",
+                                subtitle = "Usa tu huella o Face ID",
+                                onSuccess = { biometricPassed = true },
+                                onError = { err -> scope.launch { snackbarHostState.showSnackbar("Error biométrico: $err") } },
+                                onFail = { }
+                            )
+                        }
+                    }) {
+                        Text("Reintentar")
+                    }
+                }
+            }
+        }
+        return
+    }
 
     // Cargar usuario si corresponde (solo una vez)
     LaunchedEffect(Unit) {
@@ -170,8 +249,22 @@ fun SettingsScreen(
                                                     username = editedUsername,
                                                     tel = editedTel
                                                 )
-                                                settingsViewModel.updateUser(updatedUser)
-                                                isEditing = false
+                                                val proceedUpdate: () -> Unit = {
+                                                    settingsViewModel.updateUser(updatedUser)
+                                                    isEditing = false
+                                                }
+                                                if (biometricRequired && activity != null) {
+                                                    BiometricAuth.authenticate(
+                                                        activity = activity,
+                                                        title = "Confirmar cambios",
+                                                        subtitle = "Autoriza con huella o Face",
+                                                        onSuccess = { proceedUpdate() },
+                                                        onError = { err -> scope.launch { snackbarHostState.showSnackbar("Autenticación fallida: $err") } },
+                                                        onFail = { }
+                                                    )
+                                                } else {
+                                                    proceedUpdate()
+                                                }
                                             }
                                         },
                                         modifier = Modifier.weight(1f)
@@ -241,15 +334,86 @@ fun SettingsScreen(
                 // Seguridad
                 Text(text = "Seguridad", style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { showChangePasswordDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Cambiar contraseña")
+                // Toggle biometría
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Desbloqueo biométrico")
+                    Switch(
+                        checked = biometricEnabled,
+                        onCheckedChange = { enabled ->
+                            // Si se intenta deshabilitar (enabled=false) y actualmente está habilitado (biometricEnabled=true)
+                            if (!enabled && biometricEnabled) {
+                                // Solicitar biometría antes de deshabilitar
+                                if (activity != null && BiometricAuth.canAuthenticate(context)) {
+                                    BiometricAuth.authenticate(
+                                        activity = activity,
+                                        title = "Desactivar desbloqueo biométrico",
+                                        subtitle = "Confirma tu identidad",
+                                        onSuccess = {
+                                            Log.d("DebugDev", "✅ Biometría confirmada, deshabilitando")
+                                            settingsViewModel.setBiometricEnabled(false)
+                                        },
+                                        onError = { err ->
+                                            Log.e("DebugDev", "❌ Error biométrico al deshabilitar: $err")
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("No se pudo confirmar identidad")
+                                            }
+                                        },
+                                        onFail = {
+                                            Log.w("DebugDev", "⚠️ Biometría cancelada al deshabilitar")
+                                        }
+                                    )
+                                } else {
+                                    // Si no hay biometría disponible, permitir deshabilitar
+                                    settingsViewModel.setBiometricEnabled(false)
+                                }
+                            } else {
+                                // Si se habilita, permitir directamente
+                                settingsViewModel.setBiometricEnabled(enabled)
+                            }
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Cambiar contraseña (solo si NO es usuario de Google)
+                if (!isGoogleUser) {
+                    Button(onClick = { showChangePasswordDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Cambiar contraseña")
+                    }
+                } else {
+                    Text(
+                        text = "La contraseña se gestiona mediante Google",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Cerrar sesión
                 Button(
-                    onClick = { settingsViewModel.logout() },
+                    onClick = {
+                        val doLogout: () -> Unit = { settingsViewModel.logout() }
+                        if (biometricRequired && activity != null) {
+                            BiometricAuth.authenticate(
+                                activity = activity,
+                                title = "Confirmar cierre de sesión",
+                                subtitle = "Autoriza con huella o Face",
+                                onSuccess = { doLogout() },
+                                onError = { err -> scope.launch { snackbarHostState.showSnackbar("Autenticación fallida: $err") } },
+                                onFail = { }
+                            )
+                        } else {
+                            doLogout()
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -322,8 +486,23 @@ fun SettingsScreen(
                                 passwordError = "Las contraseñas no coinciden"
                                 return@TextButton
                             }
-                            scope.launch {
-                                settingsViewModel.changePassword(newPassword)
+                            val doChange: () -> Unit = {
+                                scope.launch {
+                                    settingsViewModel.changePassword(newPassword)
+                                }
+                            }
+
+                            if (biometricRequired && activity != null) {
+                                BiometricAuth.authenticate(
+                                    activity = activity,
+                                    title = "Confirmar cambio",
+                                    subtitle = "Autoriza con huella o Face",
+                                    onSuccess = { doChange() },
+                                    onError = { err -> scope.launch { snackbarHostState.showSnackbar("Autenticación fallida: $err") } },
+                                    onFail = { }
+                                )
+                            } else {
+                                doChange()
                             }
                         }) {
                             Text("Guardar")

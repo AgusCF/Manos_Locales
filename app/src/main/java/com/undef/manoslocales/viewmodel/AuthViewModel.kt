@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.undef.manoslocales.data.local.AuthTokenProvider
+import com.undef.manoslocales.data.local.preference.PreferencesManager
 import com.undef.manoslocales.data.model.GoogleUser
 import com.undef.manoslocales.data.repository.UserRepository
 import com.undef.manoslocales.ui.theme.Screen
@@ -19,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val repository: UserRepository,
-    private val tokenProvider: AuthTokenProvider
+    private val tokenProvider: AuthTokenProvider,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
     private val _isLoggedIn = MutableStateFlow(false)
@@ -193,12 +195,30 @@ class AuthViewModel @Inject constructor(
     }
 
     // ✅ Función para logout
-    fun logout() {
+    fun logout(onComplete: () -> Unit = {}) {
+        Log.d("DebugDev", "🚪 Iniciando logout - limpiando token y preferencias")
         viewModelScope.launch {
-            repository.logout()
-            _isLoggedIn.value = false
-            _errorMessage.value = null
-            Log.d("DebugDev", "🚪 Usuario hizo logout")
+            try {
+                // 1️⃣ Limpiar token
+                tokenProvider.clearToken()
+                Log.d("DebugDev", "✅ Token limpiado")
+//                biometricEnabledFlow
+                // 2️⃣ Limpiar DataStore COMPLETO (incluyendo biometría)
+                Log.d("DebugDev", "🧹 Limpiando todas las preferencias del DataStore")
+                preferencesManager.clearAll()
+                Log.d("DebugDev", "✅ DataStore completamente limpiado")
+                
+                // 3️⃣ Actualizar estado
+                _isLoggedIn.value = false
+                Log.d("DebugDev", "✅ Token limpiado, DataStore limpiado")
+                Log.i("DebugDev", "✅ Cierre de sesión exitoso")
+                
+                // 4️⃣ Ejecutar callback
+                onComplete()
+                Log.d("DebugDev", "🚪 Usuario hizo logout")
+            } catch (e: Exception) {
+                Log.e("DebugDev", "❌ Error en logout", e)
+            }
         }
     }
 

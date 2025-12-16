@@ -39,6 +39,26 @@ class SettingsViewModel @Inject constructor(
             initialValue = true
         )
 
+    val biometricEnabled: StateFlow<Boolean> = preferencesManager.biometricEnabledFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    // Detectar si el usuario inició sesión con Google
+    val isGoogleUser: StateFlow<Boolean> = MutableStateFlow(false).apply {
+        viewModelScope.launch {
+            repository.getToken()?.let { token ->
+                value = token.startsWith("google_")
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
     // Control de carga para no repetir innecesariamente
     private var userLoaded = false
     private var attemptedWithoutToken = false
@@ -98,16 +118,20 @@ class SettingsViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             try {
+                Log.d("DebugDev", "🚪 Iniciando logout - limpiando token y preferencias")
                 repository.logout()
+                preferencesManager.clearAll()  // ← Limpiar DataStore (biometricEnabled, notificationsEnabled, etc)
+                Log.d("DebugDev", "✅ Token limpiado, DataStore limpiado")
+                
                 userLoaded = false
                 attemptedWithoutToken = false
                 _user.value = null
                 _logoutSuccess.value = true
-                Log.i("DebugDev", "Cierre de sesión exitoso")
+                Log.i("DebugDev", "✅ Cierre de sesión exitoso")
             } catch (e: Exception) {
                 _errorMessage.value = "Error al cerrar sesión: ${e.localizedMessage ?: "desconocido"}"
                 _logoutSuccess.value = false
-                Log.e("DebugDev", "Error en logout", e)
+                Log.e("DebugDev", "❌ Error en logout", e)
             } finally {
                 _isLoading.value = false
             }
@@ -115,22 +139,33 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateUser(updatedUser: User) {
+        Log.d("DebugDev", "🔄 updateUser iniciado - user=${updatedUser.id}")
+        Log.d("DebugDev", "   username: ${updatedUser.username}")
+        Log.d("DebugDev", "   email: ${updatedUser.email}")
+        Log.d("DebugDev", "   tel: ${updatedUser.tel}")
+        
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                val success = repository.updateUser(updatedUser)
-                if (success) {
-                    _user.value = updatedUser
+                Log.d("DebugDev", "📤 Enviando PUT /api/users/${updatedUser.id}")
+                val updated = repository.updateUser(updatedUser)
+                Log.d("DebugDev", "✅ updateUser respuesta - updated=${updated != null}")
+
+                if (updated != null) {
+                    _user.value = updated
+                    Log.d("DebugDev", "✅ Usuario actualizado correctamente en ViewModel: $updated")
                 } else {
-                    _errorMessage.value = "Error al actualizar el usuario"
-                    Log.e("DebugDev", "updateUser devolvió false para $updatedUser")
+                    _errorMessage.value = "No pudimos actualizar tus datos. Intenta más tarde."
+                    Log.e("DebugDev", "❌ updateUser devolvió null")
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "Error al actualizar usuario: ${e.localizedMessage ?: "desconocido"}"
-                Log.e("DebugDev", "Exception en updateUser", e)
+                val errorMsg = "Error al actualizar usuario: ${e.localizedMessage ?: e.message ?: "desconocido"}"
+                _errorMessage.value = errorMsg
+                Log.e("DebugDev", "❌ Exception en updateUser - ${e::class.simpleName}: ${e.message}", e)
             } finally {
                 _isLoading.value = false
+                Log.d("DebugDev", "🔚 updateUser finalizado - loading=false")
             }
         }
     }
@@ -138,6 +173,18 @@ class SettingsViewModel @Inject constructor(
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesManager.setNotificationsEnabled(enabled)
+        }
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        Log.d("DebugDev", "🔐 SettingsViewModel.setBiometricEnabled llamado: $enabled")
+        viewModelScope.launch {
+            try {
+                preferencesManager.setBiometricEnabled(enabled)
+                Log.d("DebugDev", "✅ Biometric setting guardado en PreferencesManager")
+            } catch (e: Exception) {
+                Log.e("DebugDev", "❌ Error al guardar biometric setting", e)
+            }
         }
     }
 
@@ -170,5 +217,9 @@ class SettingsViewModel @Inject constructor(
 
     fun clearChangePasswordResult() {
         _changePasswordResult.value = null
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
     }
 }
