@@ -7,6 +7,7 @@ import com.undef.manoslocales.data.model.CartUpdateRequest
 import com.undef.manoslocales.data.model.CartValidationResponse
 import com.undef.manoslocales.data.model.Product
 import com.undef.manoslocales.data.model.User
+import com.undef.manoslocales.data.model.UpdateUserRequest
 import com.undef.manoslocales.data.model.Favorite
 import com.undef.manoslocales.data.model.LoginResponse
 import retrofit2.Response
@@ -42,8 +43,8 @@ interface ApiService {
     @PUT("users/{id}")
     suspend fun updateUser(
         @Path("id") id: String,
-        @Body user: User
-    ): Response<Void>
+        @Body request: UpdateUserRequest
+    ): Response<User>
 
     @POST("users/register")
     suspend fun registerUser(@Body user: User)
